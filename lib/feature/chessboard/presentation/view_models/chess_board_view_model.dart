@@ -9,7 +9,6 @@ import 'package:flutter/cupertino.dart';
 class ChessBoardViewModel extends ChangeNotifier {
   List<List<ChessPiece?>> _chessBoard = [];
   List<bool> _selectedPieces = [];
-  late Timer _timer;
   bool _isSelected = false;
   int _selectedFieldRow = -1;
   int _selectedFieldColumn = -1;
