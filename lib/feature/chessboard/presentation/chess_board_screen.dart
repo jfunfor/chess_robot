@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:chess316/feature/chessboard/data/services/validate_moves.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_piece.dart';
 import 'package:chess316/feature/chessboard/presentation/view_models/chess_board_view_model.dart';
 import 'package:chess316/feature/chessboard/presentation/widgets/chess_field.dart';
@@ -25,6 +26,7 @@ class ChessBoardScreen extends StatefulWidget {
 
 class _ChessBoardScreenState extends State<ChessBoardScreen> {
   late List<List<ChessPiece?>> chessBoard;
+  late final CalculateValidMoves movesModel;
 
   bool isFieldFilled(int index) {
     int x = index ~/ 8;
@@ -51,6 +53,7 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
   @override
   void initState() {
     widget.model.initChessBoard();
+    movesModel = CalculateValidMoves();
     chessBoard = widget.model.chessBoard;
     super.initState();
   }
@@ -58,27 +61,31 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: 64,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 8,
+      backgroundColor: Colors.brown[100],
+      body: Center(
+        child: GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: 64,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 8,
+          ),
+          itemBuilder: (context, index) {
+            return ListenableBuilder(
+                listenable: widget.model,
+                builder: (context, _) {
+                  return ChessField(
+                    isFilled: isFieldFilled(index),
+                    piece: getPiece(index),
+                    isSelected: widget.model.selectedFieldIndex == index,
+                    onTap: () {
+                      widget.model.selectPiece(index);
+                    },
+                    isValidMove: widget.model.validMoves[index],
+                  );
+                });
+          },
         ),
-        itemBuilder: (context, index) {
-          return ListenableBuilder(
-              listenable: widget.model,
-              builder: (context, _) {
-                return ChessField(
-                  isFilled: isFieldFilled(index),
-                  piece: getPiece(index),
-                  isSelected: widget.model.selectedFieldIndex == index,
-                  onTap: () {
-                    log(index.toString());
-                    widget.model.selectPiece(index);
-                  },
-                );
-              });
-        },
       ),
     );
   }
