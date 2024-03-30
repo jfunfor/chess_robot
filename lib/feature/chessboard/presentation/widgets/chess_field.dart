@@ -1,8 +1,9 @@
 import 'package:chess316/core/styles/colors.dart';
-import 'package:chess316/feature/chessboard/domain/models/chess_piece.dart';
 import 'package:flutter/material.dart';
 
-class ChessField extends StatefulWidget {
+import '../../domain/models/chess_pieces.dart';
+
+class ChessField extends StatelessWidget {
   final bool isFilled;
   final ChessPiece? piece;
   final Function() onTap;
@@ -19,33 +20,42 @@ class ChessField extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _ChessFieldState createState() => _ChessFieldState();
-}
-
-class _ChessFieldState extends State<ChessField> {
-
-  @override
   Widget build(BuildContext context) {
+    Color getColor() {
+      if (isFilled && !isValidMove) {
+        return AppColors.lightBrown;
+      } else {
+        if (isFilled && isValidMove) {
+          return AppColors.darkBrown.withOpacity(0.4).withGreen(255);
+        } else {
+          if (!isFilled && !isValidMove) {
+            return AppColors.darkBrown;
+          } else {
+            return AppColors.darkBrown.withOpacity(0.4).withGreen(255);
+          }
+        }
+      }
+    }
+
     return GestureDetector(
-      onTap: widget.onTap,
+      onTap: onTap,
       child: Stack(
         children: [
           Container(
             padding: const EdgeInsets.all(4),
+            margin: EdgeInsets.all(isValidMove ? 4 : 0),
             decoration: BoxDecoration(
-              color:
-              (widget.isFilled && !widget.isValidMove) ? AppColors.lightBrown : widget.isValidMove ? AppColors.lightGreen: AppColors.darkBrown,
+              color: getColor(),
             ),
-            child: widget.piece != null
+            child: piece != null
                 ? Transform.scale(
-                    scale: widget.isSelected ? 1.2 : 1,
+                    scale: isSelected ? 1.2 : 1,
                     child: Transform.translate(
-                      offset: Offset(0, widget.isSelected ? -8 : 0),
+                      offset: Offset(0, isSelected ? -8 : 0),
                       child: Image.asset(
-                        widget.piece!.icon,
-                        color: widget.piece!.isWhite
-                            ? AppColors.white
-                            : AppColors.black,
+                        piece!.icon,
+                        color:
+                            piece!.isWhite ? AppColors.white : AppColors.black,
                       ),
                     ),
                   )
