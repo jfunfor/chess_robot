@@ -1,9 +1,7 @@
 import 'dart:developer';
 
-import 'package:chess316/core/chess_icons/chess_icons.dart';
-import 'package:chess316/feature/chessboard/data/services/validate_moves.dart';
-import 'package:chess316/feature/chessboard/domain/models/chess_piece.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_piece_enum.dart';
+import 'package:chess316/feature/chessboard/domain/models/chess_pieces.dart';
 import 'package:flutter/cupertino.dart';
 
 class ChessBoardViewModel extends ChangeNotifier {
@@ -13,6 +11,11 @@ class ChessBoardViewModel extends ChangeNotifier {
   int _selectedFieldRow = -1;
   int _selectedFieldColumn = -1;
   int _selectedFieldIndex = -1;
+  bool _isWhiteTurn = true;
+  List<int> _whiteKingPosition = [7, 4];
+  List<int> _blackKingPosition = [0, 4];
+  bool _check = false;
+  String _alertMessage = '';
 
   int get selectedFieldIndex => _selectedFieldIndex;
 
@@ -25,6 +28,12 @@ class ChessBoardViewModel extends ChangeNotifier {
   List<List<ChessPiece?>> get chessBoard => _chessBoard;
 
   List<bool> get validMoves => _validMoves;
+
+  bool get check => _check;
+
+  bool get isWhiteTurn => _isWhiteTurn;
+
+  String get alertMessage => _alertMessage;
 
   ChessBoardViewModel() {
     initChessBoard();
@@ -49,97 +58,72 @@ class ChessBoardViewModel extends ChangeNotifier {
     );
 
     for (int i = 0; i < 8; i++) {
-      initBoard[1][i] = ChessPiece(
-        type: ChessPieceType.pawn,
-        icon: ChessIcons.pawn,
-        isWhite: false,
-      );
-      initBoard[6][i] = ChessPiece(
-        type: ChessPieceType.pawn,
-        icon: ChessIcons.pawn,
-        isWhite: true,
-      );
+      initBoard[1][i] = Pawn(isWhite: false);
+      initBoard[6][i] = Pawn();
     }
 
-    initBoard[0][0] = ChessPiece(
-        type: ChessPieceType.rook, icon: ChessIcons.rook, isWhite: false);
-    initBoard[0][7] = ChessPiece(
-        type: ChessPieceType.rook, icon: ChessIcons.rook, isWhite: false);
-    initBoard[7][0] = ChessPiece(
-        type: ChessPieceType.rook, icon: ChessIcons.rook, isWhite: true);
-    initBoard[7][7] = ChessPiece(
-        type: ChessPieceType.rook, icon: ChessIcons.rook, isWhite: true);
+    initBoard[0][0] = Rook(isWhite: false);
+    initBoard[0][7] = Rook(isWhite: false);
+    initBoard[7][0] = Rook();
+    initBoard[7][7] = Rook();
 
-    initBoard[0][1] = ChessPiece(
-        type: ChessPieceType.knight, icon: ChessIcons.knight, isWhite: false);
-    initBoard[0][6] = ChessPiece(
-        type: ChessPieceType.knight, icon: ChessIcons.knight, isWhite: false);
-    initBoard[7][1] = ChessPiece(
-        type: ChessPieceType.knight, icon: ChessIcons.knight, isWhite: true);
-    initBoard[7][6] = ChessPiece(
-        type: ChessPieceType.knight, icon: ChessIcons.knight, isWhite: true);
+    initBoard[0][1] = Knight(isWhite: false);
+    initBoard[0][6] = Knight(isWhite: false);
+    initBoard[7][1] = Knight();
+    initBoard[7][6] = Knight();
 
-    initBoard[0][2] = ChessPiece(
-        type: ChessPieceType.bishop, icon: ChessIcons.bishop, isWhite: false);
-    initBoard[0][5] = ChessPiece(
-        type: ChessPieceType.bishop, icon: ChessIcons.bishop, isWhite: false);
-    initBoard[7][2] = ChessPiece(
-        type: ChessPieceType.bishop, icon: ChessIcons.bishop, isWhite: true);
-    initBoard[7][5] = ChessPiece(
-        type: ChessPieceType.bishop, icon: ChessIcons.bishop, isWhite: true);
+    initBoard[0][2] = Bishop(isWhite: false);
+    initBoard[0][5] = Bishop(isWhite: false);
+    initBoard[7][2] = Bishop();
+    initBoard[7][5] = Bishop();
 
-    initBoard[0][3] = ChessPiece(
-        type: ChessPieceType.queen, icon: ChessIcons.queen, isWhite: false);
-    initBoard[0][4] = ChessPiece(
-        type: ChessPieceType.king, icon: ChessIcons.king, isWhite: false);
-    initBoard[7][4] = ChessPiece(
-        type: ChessPieceType.queen, icon: ChessIcons.queen, isWhite: true);
-    initBoard[7][3] = ChessPiece(
-        type: ChessPieceType.king, icon: ChessIcons.king, isWhite: true);
+    initBoard[0][3] = Queen(isWhite: false);
+    initBoard[0][4] = King(isWhite: false);
+    initBoard[7][3] = Queen();
+    initBoard[7][4] = King();
 
     _chessBoard = initBoard;
     _selectedPieces = initSelectedPieces;
     _validMoves = initValidMoves;
+
+    _selectedFieldRow = -1;
+    _selectedFieldColumn = -1;
+    _selectedFieldIndex = -1;
+    _isWhiteTurn = true;
+    _whiteKingPosition = [7, 4];
+    _blackKingPosition = [0, 4];
+    _check = false;
+
     notifyListeners();
   }
 
   void selectPiece(int index) {
+    final row = index ~/ 8;
+    final column = index % 8;
     if (_selectedPieces[index]) {
-      _selectedFieldIndex = -1;
-      _selectedFieldRow = -1;
-      _selectedFieldColumn = -1;
-      _selectedPieces[index] = false;
-      for (int i = 0; i < 64; i++) {
-        _validMoves[i] = false;
-      }
+      reset();
+      clear();
     } else {
-      final row = index ~/ 8;
-      final column = index % 8;
-
       if (_validMoves[index] == true &&
-          _chessBoard[_selectedFieldRow][_selectedFieldColumn] != null) {
+          _chessBoard[_selectedFieldRow][_selectedFieldColumn] != null &&
+          _chessBoard[_selectedFieldRow][_selectedFieldColumn]!.isWhite ==
+              _isWhiteTurn) {
         movePiece(index);
-      }
+      } else {
+        if (_chessBoard[row][column] != null &&
+            _chessBoard[row][column]!.isWhite == _isWhiteTurn) {
+          clear();
+          _selectedFieldIndex = index;
+          _selectedFieldRow = row;
+          _selectedFieldColumn = column;
+          _selectedPieces[index] = true;
 
-      if (_chessBoard[row][column] != null) {
-        for (int i = 0; i < 64; i++) {
-          _selectedPieces[i] = false;
-          _validMoves[i] = false;
-        }
+          final List<List<int>> moves =
+              futureValidMoves(_selectedFieldRow, _selectedFieldColumn, true);
 
-        _selectedFieldIndex = index;
-        _selectedFieldRow = index ~/ 8;
-        _selectedFieldColumn = index % 8;
-        _selectedPieces[index] = true;
-
-        final ChessPiece piece =
-            chessBoard[_selectedFieldRow][_selectedFieldColumn]!;
-
-        final List<List<int>> moves = CalculateValidMoves().calculateValidMoves(
-            _selectedFieldRow, _selectedFieldColumn, piece, chessBoard);
-
-        for (var move in moves) {
-          _validMoves[move[0] * 8 + move[1]] = true;
+          for (var move in moves) {
+            _validMoves[move[0] * 8 + move[1]] = true;
+          }
         }
       }
     }
@@ -149,8 +133,165 @@ class ChessBoardViewModel extends ChangeNotifier {
   void movePiece(int index) {
     final row = index ~/ 8;
     final column = index % 8;
+
     _chessBoard[row][column] =
         _chessBoard[_selectedFieldRow][_selectedFieldColumn];
+
+    if (_chessBoard[_selectedFieldRow][_selectedFieldColumn]!.type ==
+        ChessPieceType.king) {
+      if (_chessBoard[_selectedFieldRow][_selectedFieldColumn]!.isWhite) {
+        _whiteKingPosition = [row, column];
+        log(_whiteKingPosition.toString());
+      } else {
+        _blackKingPosition = [row, column];
+        log(_blackKingPosition.toString());
+      }
+    }
+
     _chessBoard[_selectedFieldRow][_selectedFieldColumn] = null;
+
+    if (isKingInCheck(!_isWhiteTurn)) {
+      _check = true;
+      _alertMessage = 'Check';
+      log('in check');
+    } else {
+      _check = false;
+      _alertMessage = '';
+    }
+
+    if (isCheckMate(!_isWhiteTurn)) {
+      log('check mate');
+      _alertMessage = 'Check Mate';
+    }
+
+    _isWhiteTurn = !_isWhiteTurn;
+
+    clear();
+    notifyListeners();
+  }
+
+  bool isKingInCheck(bool isWhiteKing) {
+    final kingPosition = isWhiteKing ? _whiteKingPosition : _blackKingPosition;
+    log(kingPosition.toString(), name: 'king pos');
+
+    for (int i = 0; i < 8; i++) {
+      for (int j = 0; j < 8; j++) {
+        final ChessPiece? piece = _chessBoard[i][j];
+
+        if (piece != null && _chessBoard[i][j]?.isWhite != isWhiteKing) {
+          final List<List<int>> moves =
+              futureValidMoves(_selectedFieldRow, _selectedFieldColumn, true);
+          log(moves.toString(), name: 'moves');
+
+          if (moves.any((move) =>
+              move[0] == kingPosition[0] && move[1] == kingPosition[1])) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  bool isCheckMate(bool isWhiteKing) {
+    if (!isKingInCheck(isWhiteKing)) {
+      return false;
+    }
+
+    for (int i = 0; i < 8; i++) {
+      for (int j = 0; j < 8; j++) {
+        if (_chessBoard[i][j] == null ||
+            _chessBoard[i][j]!.isWhite != isWhiteKing) {
+          continue;
+        }
+
+        final ChessPiece? piece = _chessBoard[i][j];
+        if (piece != null) {
+          final List<List<int>> moves =
+              futureValidMoves(_selectedFieldRow, _selectedFieldColumn, true);
+          if (moves.isNotEmpty) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  List<List<int>> futureValidMoves(int row, int col, bool checkSimulation) {
+    List<List<int>> futureValidMoves = [];
+    final ChessPiece? piece = _chessBoard[row][col];
+
+    if (piece != null) {
+      final List<List<int>> moves = piece.validMoves(row, col, _chessBoard);
+
+      if (checkSimulation) {
+        for (var move in moves) {
+          int endRow = move[0];
+          int endCol = move[1];
+          if (futureMoveIsSafe(row, col, endRow, endCol, piece)) {
+            futureValidMoves.add(move);
+          }
+        }
+      } else {
+        futureValidMoves = moves;
+      }
+    }
+
+    return futureValidMoves;
+  }
+
+  bool futureMoveIsSafe(
+      int startRow, int startCol, int endRow, int endCol, ChessPiece piece) {
+    ChessPiece? originalDestinationPiece = _chessBoard[endRow][endCol];
+
+    List<int>? originalKingPos;
+    bool moveIsSafe = true;
+
+    if (piece.type == ChessPieceType.king) {
+      originalKingPos = piece.isWhite ? _whiteKingPosition : _blackKingPosition;
+
+      if (piece.isWhite) {
+        _whiteKingPosition = [endRow, endCol];
+      } else {
+        _blackKingPosition = [endRow, endCol];
+      }
+
+      _chessBoard[endRow][endCol] = piece;
+      _chessBoard[startRow][startCol] = null;
+
+      moveIsSafe = !isKingInCheck(!_isWhiteTurn);
+      log(moveIsSafe.toString(), name: "moveIsSafe");
+
+      _chessBoard[startRow][startCol] = piece;
+      _chessBoard[endRow][endCol] = originalDestinationPiece;
+
+      if (piece.isWhite) {
+        _whiteKingPosition = originalKingPos;
+      } else {
+        _blackKingPosition = originalKingPos;
+      }
+    }
+
+    return moveIsSafe;
+  }
+
+  void clear() {
+    for (int i = 0; i < 64; i++) {
+      _selectedPieces[i] = false;
+      _validMoves[i] = false;
+    }
+  }
+
+  void reset() {
+    _selectedFieldIndex = -1;
+    _selectedFieldRow = -1;
+    _selectedFieldColumn = -1;
+  }
+
+  void restartGame() {
+    clear();
+    reset();
+    initChessBoard();
   }
 }
