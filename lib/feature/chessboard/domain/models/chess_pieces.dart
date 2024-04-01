@@ -1,5 +1,4 @@
 import 'package:chess316/core/chess_icons/chess_icons.dart';
-import 'package:chess316/feature/chessboard/data/services/helper.dart';
 
 import 'chess_piece_enum.dart';
 
@@ -11,6 +10,10 @@ abstract class ChessPiece {
   ChessPiece({required this.type, required this.icon, required this.isWhite});
 
   List<List<int>> validMoves(int row, int col, List<List<ChessPiece?>> board);
+}
+
+bool _isInBoard(int row, int col) {
+  return row >= 0 && row < 8 && col >= 0 && col < 8;
 }
 
 class Pawn extends ChessPiece {
@@ -25,26 +28,26 @@ class Pawn extends ChessPiece {
     List<List<int>> moves = [];
     int direction = (isWhite) ? -1 : 1;
 
-    if (HelperMethods.isInBoard(row + direction, col) &&
+    if (_isInBoard(row + direction, col) &&
         board[row + direction][col] == null) {
       moves.add([row + direction, col]);
     }
 
     if ((row == 1 && !isWhite) || (row == 6 && isWhite)) {
-      if (HelperMethods.isInBoard(row + 2 * direction, col) &&
+      if (_isInBoard(row + 2 * direction, col) &&
           board[row + 2 * direction][col] == null &&
           board[row + direction][col] == null) {
         moves.add([row + 2 * direction, col]);
       }
     }
 
-    if (HelperMethods.isInBoard(row + direction, col - 1) &&
+    if (_isInBoard(row + direction, col - 1) &&
         board[row + direction][col - 1] != null &&
         board[row + direction][col - 1]!.isWhite != isWhite) {
       moves.add([row + direction, col - 1]);
     }
 
-    if (HelperMethods.isInBoard(row + direction, col + 1) &&
+    if (_isInBoard(row + direction, col + 1) &&
         board[row + direction][col + 1] != null &&
         board[row + direction][col + 1]!.isWhite != isWhite) {
       moves.add([row + direction, col + 1]);
@@ -76,7 +79,7 @@ class King extends ChessPiece {
     for (var dir in dirs) {
       var newRow = row + dir[0];
       var newCol = col + dir[1];
-      if (!HelperMethods.isInBoard(newRow, newCol)) {
+      if (!_isInBoard(newRow, newCol)) {
         continue;
       }
       final obstacle = board[newRow][newCol];
@@ -113,7 +116,7 @@ class Queen extends ChessPiece {
       while (true) {
         var newRow = row + i * dir[0];
         var newCol = col + i * dir[1];
-        if (!HelperMethods.isInBoard(newRow, newCol)) {
+        if (!_isInBoard(newRow, newCol)) {
           break;
         }
         final obstacle = board[newRow][newCol];
@@ -155,7 +158,7 @@ class Knight extends ChessPiece {
     for (var move in knightMoves) {
       int newRow = row + move[0];
       int newCol = col + move[1];
-      if (!HelperMethods.isInBoard(newRow, newCol)) {
+      if (!_isInBoard(newRow, newCol)) {
         continue;
       }
       final obstacle = board[newRow][newCol];
@@ -192,7 +195,7 @@ class Rook extends ChessPiece {
       while (true) {
         var newRow = row + i * dir[0];
         var newCol = col + i * dir[1];
-        if (!HelperMethods.isInBoard(newRow, newCol)) {
+        if (!_isInBoard(newRow, newCol)) {
           break;
         }
         final obstacle = board[newRow][newCol];
@@ -232,7 +235,7 @@ class Bishop extends ChessPiece {
         int newRow = row + i * dir[0];
         int newCol = col + i * dir[1];
 
-        if (!HelperMethods.isInBoard(newRow, newCol)) {
+        if (!_isInBoard(newRow, newCol)) {
           break;
         }
         final obstacle = board[newRow][newCol];
