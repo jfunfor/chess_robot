@@ -170,21 +170,21 @@ class ChessBoardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool isKingInCheck(bool isWhiteKing) {
-    final kingPosition = isWhiteKing ? _whiteKingPosition : _blackKingPosition;
-    log(kingPosition.toString(), name: 'king pos');
+  bool isKingInCheck(bool isWhiteKing, [List<int>? kingPos]) {
+    final kingPosition =
+        kingPos ?? (isWhiteKing ? _whiteKingPosition : _blackKingPosition);
 
     for (int i = 0; i < 8; i++) {
       for (int j = 0; j < 8; j++) {
         final ChessPiece? piece = _chessBoard[i][j];
 
-        if (piece != null && _chessBoard[i][j]?.isWhite != isWhiteKing) {
+        if (piece != null && piece.isWhite != isWhiteKing) {
           final List<List<int>> moves =
-              futureValidMoves(_selectedFieldRow, _selectedFieldColumn, true);
-          log(moves.toString(), name: 'moves');
-
-          if (moves.any((move) =>
-              move[0] == kingPosition[0] && move[1] == kingPosition[1])) {
+              piece.validMoves(i, j, _chessBoard);
+          if (moves
+              .where((move) =>
+                  move[0] == kingPosition[0] && move[1] == kingPosition[1])
+              .isNotEmpty) {
             return true;
           }
         }
@@ -198,24 +198,24 @@ class ChessBoardViewModel extends ChangeNotifier {
       return false;
     }
 
-    for (int i = 0; i < 8; i++) {
-      for (int j = 0; j < 8; j++) {
-        if (_chessBoard[i][j] == null ||
-            _chessBoard[i][j]!.isWhite != isWhiteKing) {
-          continue;
-        }
+    bool result = true;
 
-        final ChessPiece? piece = _chessBoard[i][j];
-        if (piece != null) {
-          final List<List<int>> moves =
-              futureValidMoves(_selectedFieldRow, _selectedFieldColumn, true);
-          if (moves.isNotEmpty) {
-            return false;
-          }
-        }
+    final moves = _chessBoard[isWhiteKing
+                ? _whiteKingPosition.first
+                : _blackKingPosition.first]
+            [isWhiteKing ? _whiteKingPosition.last : _blackKingPosition.last]
+        ?.validMoves(
+            isWhiteKing ? _whiteKingPosition.first : _blackKingPosition.first,
+            isWhiteKing ? _whiteKingPosition.last : _blackKingPosition.last,
+            _chessBoard);
+
+    for (final move in moves ?? []){
+      if (!isKingInCheck(isWhiteKing, move)){
+        result = false;
       }
     }
-    return true;
+
+    return result;
   }
 
   List<List<int>> futureValidMoves(int row, int col, bool checkSimulation) {
