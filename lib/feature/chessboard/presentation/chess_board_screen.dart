@@ -48,7 +48,6 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
       body: Center(
         child: LayoutBuilder(
           builder: (context, constraints) {
-            print(constraints.maxHeight);
             return Container(
               constraints: BoxConstraints(
                 maxWidth: min(600, constraints.maxHeight-220),
