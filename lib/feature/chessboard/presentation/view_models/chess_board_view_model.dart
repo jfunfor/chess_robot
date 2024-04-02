@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:chess316/feature/chessboard/domain/models/chess_piece_enum.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_pieces.dart';
 import 'package:flutter/cupertino.dart';
@@ -15,6 +13,8 @@ class ChessBoardViewModel extends ChangeNotifier {
   List<int> _whiteKingPosition = [7, 4];
   List<int> _blackKingPosition = [0, 4];
   bool _check = false;
+  bool _checkMate = false;
+
   String _alertMessage = '';
 
   int get selectedFieldIndex => _selectedFieldIndex;
@@ -30,6 +30,8 @@ class ChessBoardViewModel extends ChangeNotifier {
   List<bool> get validMoves => _validMoves;
 
   bool get check => _check;
+
+  bool get checkMate => _checkMate;
 
   bool get isWhiteTurn => _isWhiteTurn;
 
@@ -93,7 +95,8 @@ class ChessBoardViewModel extends ChangeNotifier {
     _whiteKingPosition = [7, 4];
     _blackKingPosition = [0, 4];
     _check = false;
-
+    _checkMate = false;
+    _alertMessage = '';
     notifyListeners();
   }
 
@@ -108,7 +111,7 @@ class ChessBoardViewModel extends ChangeNotifier {
           _chessBoard[_selectedFieldRow][_selectedFieldColumn] != null &&
           _chessBoard[_selectedFieldRow][_selectedFieldColumn]!.isWhite ==
               _isWhiteTurn) {
-        movePiece(index);
+        movePiece(row, column);
       } else {
         if (_chessBoard[row][column] != null &&
             _chessBoard[row][column]!.isWhite == _isWhiteTurn) {
@@ -119,7 +122,7 @@ class ChessBoardViewModel extends ChangeNotifier {
           _selectedPieces[index] = true;
 
           final List<List<int>> moves =
-              futureValidMoves(_selectedFieldRow, _selectedFieldColumn, true);
+              simulateFutureMove(_selectedFieldRow, _selectedFieldColumn, true);
 
           for (var move in moves) {
             _validMoves[move[0] * 8 + move[1]] = true;
@@ -130,38 +133,32 @@ class ChessBoardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void movePiece(int index) {
-    final row = index ~/ 8;
-    final column = index % 8;
-
-    _chessBoard[row][column] =
-        _chessBoard[_selectedFieldRow][_selectedFieldColumn];
-
+  void movePiece(int row, int column) {
     if (_chessBoard[_selectedFieldRow][_selectedFieldColumn]!.type ==
         ChessPieceType.king) {
       if (_chessBoard[_selectedFieldRow][_selectedFieldColumn]!.isWhite) {
         _whiteKingPosition = [row, column];
-        log(_whiteKingPosition.toString());
       } else {
         _blackKingPosition = [row, column];
-        log(_blackKingPosition.toString());
       }
     }
 
+    _chessBoard[row][column] =
+        _chessBoard[_selectedFieldRow][_selectedFieldColumn];
+
     _chessBoard[_selectedFieldRow][_selectedFieldColumn] = null;
 
-    if (isKingInCheck(!_isWhiteTurn)) {
+    if (isCheck(!_isWhiteTurn)) {
       _check = true;
       _alertMessage = 'Check';
-      log('in check');
     } else {
       _check = false;
       _alertMessage = '';
     }
 
     if (isCheckMate(!_isWhiteTurn)) {
-      log('check mate');
       _alertMessage = 'Check Mate';
+      _checkMate = true;
     }
 
     _isWhiteTurn = !_isWhiteTurn;
@@ -170,21 +167,19 @@ class ChessBoardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool isKingInCheck(bool isWhiteKing, [List<int>? kingPos]) {
-    final kingPosition =
-        kingPos ?? (isWhiteKing ? _whiteKingPosition : _blackKingPosition);
+  bool isCheck(bool isWhiteKing) {
+    List<int> kingPosition =
+        isWhiteKing ? _whiteKingPosition : _blackKingPosition;
 
     for (int i = 0; i < 8; i++) {
       for (int j = 0; j < 8; j++) {
-        final ChessPiece? piece = _chessBoard[i][j];
-
-        if (piece != null && piece.isWhite != isWhiteKing) {
-          final List<List<int>> moves =
-              piece.validMoves(i, j, _chessBoard);
-          if (moves
-              .where((move) =>
-                  move[0] == kingPosition[0] && move[1] == kingPosition[1])
-              .isNotEmpty) {
+        if (_chessBoard[i][j] == null ||
+            _chessBoard[i][j]!.isWhite == isWhiteKing) {
+          continue;
+        }
+        List<List<int>> moves = simulateFutureMove(i, j, false);
+        for (var move in moves) {
+          if (move[0] == kingPosition[0] && move[1] == kingPosition[1]) {
             return true;
           }
         }
@@ -194,32 +189,26 @@ class ChessBoardViewModel extends ChangeNotifier {
   }
 
   bool isCheckMate(bool isWhiteKing) {
-    if (!isKingInCheck(isWhiteKing)) {
+    if (!isCheck(isWhiteKing)) {
       return false;
     }
-
-    bool result = true;
-
-    final moves = _chessBoard[isWhiteKing
-                ? _whiteKingPosition.first
-                : _blackKingPosition.first]
-            [isWhiteKing ? _whiteKingPosition.last : _blackKingPosition.last]
-        ?.validMoves(
-            isWhiteKing ? _whiteKingPosition.first : _blackKingPosition.first,
-            isWhiteKing ? _whiteKingPosition.last : _blackKingPosition.last,
-            _chessBoard);
-
-    for (final move in moves ?? []){
-      if (!isKingInCheck(isWhiteKing, move)){
-        result = false;
+    for (int i = 0; i < 8; i++) {
+      for (int j = 0; j < 8; j++) {
+        if (_chessBoard[i][j] == null ||
+            _chessBoard[i][j]!.isWhite != isWhiteKing) {
+          continue;
+        }
+        List<List<int>> validMoves = simulateFutureMove(i, j, true);
+        if (validMoves.isNotEmpty) {
+          return false;
+        }
       }
     }
-
-    return result;
+    return true;
   }
 
-  List<List<int>> futureValidMoves(int row, int col, bool checkSimulation) {
-    List<List<int>> futureValidMoves = [];
+  List<List<int>> simulateFutureMove(int row, int col, bool checkSimulation) {
+    List<List<int>> realValidMoves = [];
     final ChessPiece? piece = _chessBoard[row][col];
 
     if (piece != null) {
@@ -230,15 +219,15 @@ class ChessBoardViewModel extends ChangeNotifier {
           int endRow = move[0];
           int endCol = move[1];
           if (futureMoveIsSafe(row, col, endRow, endCol, piece)) {
-            futureValidMoves.add(move);
+            realValidMoves.add(move);
           }
         }
       } else {
-        futureValidMoves = moves;
+        realValidMoves = moves;
       }
     }
 
-    return futureValidMoves;
+    return realValidMoves;
   }
 
   bool futureMoveIsSafe(
@@ -246,7 +235,6 @@ class ChessBoardViewModel extends ChangeNotifier {
     ChessPiece? originalDestinationPiece = _chessBoard[endRow][endCol];
 
     List<int>? originalKingPos;
-    bool moveIsSafe = true;
 
     if (piece.type == ChessPieceType.king) {
       originalKingPos = piece.isWhite ? _whiteKingPosition : _blackKingPosition;
@@ -256,21 +244,20 @@ class ChessBoardViewModel extends ChangeNotifier {
       } else {
         _blackKingPosition = [endRow, endCol];
       }
+    }
 
-      _chessBoard[endRow][endCol] = piece;
-      _chessBoard[startRow][startCol] = null;
+    _chessBoard[endRow][endCol] = piece;
+    _chessBoard[startRow][startCol] = null;
 
-      moveIsSafe = !isKingInCheck(!_isWhiteTurn);
-      log(moveIsSafe.toString(), name: "moveIsSafe");
+    bool moveIsSafe = !isCheck(piece.isWhite);
 
-      _chessBoard[startRow][startCol] = piece;
-      _chessBoard[endRow][endCol] = originalDestinationPiece;
+    _chessBoard[startRow][startCol] = piece;
+    _chessBoard[endRow][endCol] = originalDestinationPiece;
 
-      if (piece.isWhite) {
-        _whiteKingPosition = originalKingPos;
-      } else {
-        _blackKingPosition = originalKingPos;
-      }
+    if (piece.isWhite) {
+      _whiteKingPosition = originalKingPos ?? _whiteKingPosition;
+    } else {
+      _blackKingPosition = originalKingPos ?? _blackKingPosition;
     }
 
     return moveIsSafe;
