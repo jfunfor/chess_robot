@@ -1,3 +1,4 @@
+import 'package:chess316/feature/chessboard/data/service/chess_robot_service.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_piece_enum.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_pieces.dart';
 import 'package:flutter/cupertino.dart';
@@ -15,7 +16,12 @@ class ChessBoardViewModel extends ChangeNotifier {
   bool _check = false;
   bool _checkMate = false;
 
+  final ChessRobotService _service = ChessRobotService();
+  int _killedPiecesCount = 0;
+
   String _alertMessage = '';
+
+  String _connectionErrorMessage = '';
 
   int get selectedFieldIndex => _selectedFieldIndex;
 
@@ -36,6 +42,8 @@ class ChessBoardViewModel extends ChangeNotifier {
   bool get isWhiteTurn => _isWhiteTurn;
 
   String get alertMessage => _alertMessage;
+
+  String get connectionErrorMessage => _connectionErrorMessage;
 
   ChessBoardViewModel() {
     initChessBoard();
@@ -142,6 +150,8 @@ class ChessBoardViewModel extends ChangeNotifier {
         _blackKingPosition = [row, column];
       }
     }
+
+    movePieceWithRobot(row, column);
 
     _chessBoard[row][column] =
         _chessBoard[_selectedFieldRow][_selectedFieldColumn];
@@ -261,6 +271,25 @@ class ChessBoardViewModel extends ChangeNotifier {
     }
 
     return moveIsSafe;
+  }
+
+  void movePieceWithRobot(int row, int column) {
+    try {
+      _service.checkConnection();
+      final int positionFrom = _selectedFieldIndex;
+      final int positionTo = row * 8 + column;
+
+      if (_chessBoard[row][column] != null) {
+        //move killed piece from the board
+        _service.moveChessPiece(1, positionFrom, 2, _killedPiecesCount);
+        //after killed piece removed - move the killer
+        _service.moveChessPiece(1, positionFrom, 2, positionTo);
+        //increment _killedPieceCount to move next killed piece to an empty field on the second board
+        _killedPiecesCount++;
+      }
+    } catch (e) {
+      _connectionErrorMessage = e.toString();
+    }
   }
 
   void clear() {
