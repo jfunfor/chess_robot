@@ -1,16 +1,34 @@
-# chess316
+# ChessRobot316
+Данный проект представляет собой веб-приложение для игры в шахматы с интеграцией взаимодействия с роботом манипулятором (робот-рука). Приложение написано на фреймворке Flutter, взаимодействие с роботом осуществляется с помощью tcp/ip протокола.
 
-client for chess robot
+## Технологии
+- [Flutter](https://flutter.dev)
 
-## Getting Started
+## Использование
+Запустив приложение в браузере начинается игра. Нажав на фигуру, поля, являющимися возможными для хода подсвечиваются зеленым, нажав на такое поле, фигура перемещается на экране, в этот же момент робот манипулятор осуществялет точно такой же ход на самом стенде.
 
-This project is a starting point for a Flutter application.
+## Разработка
 
-A few resources to get you started if this is your first Flutter project:
+### Установка зависимостей
+Для установки зависимостей, выполните команду:
+```sh
+$ flutter pub get
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Зачем мы разработали этот проект?
+Чтобы получить зачет и помочь оживить интерфейс для взаимодействя с роботом.
+
+## To do
+- [x] Интерфейс
+- [x] Определение правильных шагов
+- [x] Шах, шах и мат
+- [x] Подключение к роботу через tcp/ip протокол
+- [] Проверено на стенде
+- [] Перезапуск игры
+
+## Команда проекта
+
+- Погребняк Кирилл — FLutter Developer
+- Ершов Артем — FLutter Developer
+
