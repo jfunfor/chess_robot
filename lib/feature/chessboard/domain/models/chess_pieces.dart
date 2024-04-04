@@ -2,6 +2,7 @@ import 'package:chess316/core/chess_icons/chess_icons.dart';
 
 import 'chess_piece_enum.dart';
 
+/// Represents all chess pieces with type, icon and color.
 abstract class ChessPiece {
   final ChessPieceType type;
   final String icon;
@@ -12,10 +13,13 @@ abstract class ChessPiece {
   List<List<int>> validMoves(int row, int col, List<List<ChessPiece?>> board);
 }
 
+/// Checks if a given position is within the bounds of the chessboard.
 bool _isInBoard(int row, int col) {
   return row >= 0 && row < 8 && col >= 0 && col < 8;
 }
 
+///Represents a pawn chess piece
+///Overrides [validMoves] method according to rules of pawn moves
 class Pawn extends ChessPiece {
   Pawn({
     ChessPieceType type = ChessPieceType.pawn,
@@ -56,6 +60,8 @@ class Pawn extends ChessPiece {
   }
 }
 
+///Represents a king chess piece
+///Overrides [validMoves] method according to rules of king moves
 class King extends ChessPiece {
   King({
     ChessPieceType type = ChessPieceType.king,
@@ -91,6 +97,8 @@ class King extends ChessPiece {
   }
 }
 
+///Represents a queen chess piece
+///Overrides [validMoves] method according to rules of queen moves
 class Queen extends ChessPiece {
   Queen({
     ChessPieceType type = ChessPieceType.queen,
@@ -134,6 +142,8 @@ class Queen extends ChessPiece {
   }
 }
 
+///Represents a knight chess piece
+///Overrides [validMoves] method according to rules of knight moves
 class Knight extends ChessPiece {
   Knight({
     ChessPieceType type = ChessPieceType.knight,
@@ -174,6 +184,8 @@ class Knight extends ChessPiece {
   }
 }
 
+///Represents a rook chess piece
+///Overrides [validMoves] method according to rules of rook moves
 class Rook extends ChessPiece {
   Rook({
     ChessPieceType type = ChessPieceType.rook,
@@ -213,6 +225,8 @@ class Rook extends ChessPiece {
   }
 }
 
+///Represents a pawn bishop piece
+///Overrides [validMoves] method according to rules of bishop moves
 class Bishop extends ChessPiece {
   Bishop({
     ChessPieceType type = ChessPieceType.bishop,

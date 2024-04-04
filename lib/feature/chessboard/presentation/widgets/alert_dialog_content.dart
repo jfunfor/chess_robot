@@ -37,9 +37,7 @@ class AlertDialogContent extends StatelessWidget {
                       MaterialStateProperty.all<Color>(AppColors.white),
                 ),
                 onPressed: () {
-                  Navigator.of(context)
-                    ..pop()
-                    ..pop();
+                  Navigator.of(context).pop();
                 },
                 child: const Text('No'),
               ),
