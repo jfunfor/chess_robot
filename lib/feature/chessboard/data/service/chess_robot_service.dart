@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:chess316/core/constants/app_constants.dart';
 import 'package:tcp_socket_connection/tcp_socket_connection.dart';
 
@@ -14,7 +12,6 @@ class ChessRobotService {
   bool get isConnected => _tcpSocketConnection.isConnected();
 
   void checkConnection() {
-    log(isConnected.toString());
     if (!isConnected) {
       throw "No connection to robot";
     }
