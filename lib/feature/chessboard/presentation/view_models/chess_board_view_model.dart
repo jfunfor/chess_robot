@@ -49,6 +49,7 @@ class ChessBoardViewModel extends ChangeNotifier {
     initChessBoard();
   }
 
+  /// Initialization of the chessboard, default placement of pieces
   void initChessBoard() {
     List<List<ChessPiece?>> initBoard = List.generate(
       8,
@@ -108,6 +109,10 @@ class ChessBoardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  ///Set a selected piece
+  ///If user taps on already selected piece - it unselects
+  ///If user selects piece it calls [simulateFutureMove] to calculate valid moves for a given piece
+  ///If user taps on valid field after selecting the piece it calls the [movePiece] method
   void selectPiece(int index) {
     final row = index ~/ 8;
     final column = index % 8;
@@ -141,6 +146,8 @@ class ChessBoardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  ///Moves the piece to a given [row] and [column] on the screen
+  ///Calls [movePieceWithRobot] method to move a piece on a real chess board with Robot
   void movePiece(int row, int column) {
     if (_chessBoard[_selectedFieldRow][_selectedFieldColumn]!.type ==
         ChessPieceType.king) {
@@ -177,6 +184,8 @@ class ChessBoardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  ///Checks for check condition
+  ///Returns true if there is a check, otherwise returns false
   bool isCheck(bool isWhiteKing) {
     List<int> kingPosition =
         isWhiteKing ? _whiteKingPosition : _blackKingPosition;
@@ -198,6 +207,8 @@ class ChessBoardViewModel extends ChangeNotifier {
     return false;
   }
 
+  /// Checks for a checkmate condition.
+  /// Returns true if there is a checkmate, otherwise returns false
   bool isCheckMate(bool isWhiteKing) {
     if (!isCheck(isWhiteKing)) {
       return false;
@@ -217,6 +228,9 @@ class ChessBoardViewModel extends ChangeNotifier {
     return true;
   }
 
+  ///Simulates possible moves for a given piece at a specified position
+  ///Returns a list of valid (safe) moves [realValidMoves] that the piece can make
+  ///Is used for subsequent use in the logic of moving a piece or checking checkmate conditions.
   List<List<int>> simulateFutureMove(int row, int col, bool checkSimulation) {
     List<List<int>> realValidMoves = [];
     final ChessPiece? piece = _chessBoard[row][col];
@@ -240,6 +254,8 @@ class ChessBoardViewModel extends ChangeNotifier {
     return realValidMoves;
   }
 
+  ///Checks the simulated move to see if it will lead to a check or not
+  ///Return true if the move is safe, otherwise returns false
   bool futureMoveIsSafe(
       int startRow, int startCol, int endRow, int endCol, ChessPiece piece) {
     ChessPiece? originalDestinationPiece = _chessBoard[endRow][endCol];
@@ -273,6 +289,9 @@ class ChessBoardViewModel extends ChangeNotifier {
     return moveIsSafe;
   }
 
+  ///Move chess piece with Robot
+  ///Moves killed piece to the second chess board. Then moves the killer
+  ///Will throw an exception if there is no connection to Robot with TCP/IP
   void movePieceWithRobot(int row, int column) {
     try {
       _service.checkConnection();
@@ -292,6 +311,7 @@ class ChessBoardViewModel extends ChangeNotifier {
     }
   }
 
+  /// Clears the selected and valid move states.
   void clear() {
     for (int i = 0; i < 64; i++) {
       _selectedPieces[i] = false;
@@ -299,12 +319,15 @@ class ChessBoardViewModel extends ChangeNotifier {
     }
   }
 
+  /// Resets the selected field state.
+  /// '-1' means nothing is selected.
   void reset() {
     _selectedFieldIndex = -1;
     _selectedFieldRow = -1;
     _selectedFieldColumn = -1;
   }
 
+  /// Restarts the game by initializing the chessboard again.
   void restartGame() {
     clear();
     reset();
