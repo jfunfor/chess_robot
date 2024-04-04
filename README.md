@@ -26,9 +26,9 @@ $ flutter pub get
 - [x] Подключение к роботу через tcp/ip протокол
 - [ ] Проверено на стенде
 - [ ] Перезапуск игры
+- [ ] Размещение web-приложения в одной сети с роботом
 
 ## Команда проекта
 
-- Погребняк Кирилл — Flutter Developer
-- Ершов Артем — Flutter Developer
-
+- [Погребняк Кирилл](https://t.me/kroll4) — Flutter Developer
+- [Ершов Артем](https://t.me/naxyo3) — Flutter Developer
