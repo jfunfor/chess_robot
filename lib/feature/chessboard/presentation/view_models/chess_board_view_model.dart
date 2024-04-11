@@ -1,4 +1,5 @@
 import 'package:chess316/feature/chessboard/data/service/chess_robot_service.dart';
+import 'package:chess316/feature/chessboard/domain/board_resetter.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_piece_enum.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_pieces.dart';
 import 'package:flutter/cupertino.dart';
@@ -17,7 +18,7 @@ class ChessBoardViewModel extends ChangeNotifier {
   bool _checkMate = false;
 
   final ChessRobotService _service = ChessRobotService();
-  int _killedPiecesCount = 0;
+  int _killedPiecesCount = 1;
 
   String _alertMessage = '';
 
@@ -292,23 +293,50 @@ class ChessBoardViewModel extends ChangeNotifier {
   ///Move chess piece with Robot
   ///Moves killed piece to the second chess board. Then moves the killer
   ///Will throw an exception if there is no connection to Robot with TCP/IP
-  void movePieceWithRobot(int row, int column) {
+  void movePieceWithRobot(int row, int column) async {
     try {
       _service.checkConnection();
-      final int positionFrom = _selectedFieldIndex;
-      final int positionTo = row * 8 + column;
-
+      final int positionFrom =
+          positionFromMatrix(_selectedFieldRow, _selectedFieldColumn);
+      final int positionTo = positionFromMatrix(row, column);
       if (_chessBoard[row][column] != null) {
         //move killed piece from the board
-        _service.moveChessPiece(1, positionFrom, 2, _killedPiecesCount);
+        _service.moveChessPiece(2, positionTo, 1, _killedPiecesCount);
+        // add this move into reSetter
+        BoardReSetter.addMove(
+            boardFrom: 2,
+            boardTo: 1,
+            positionTo: _killedPiecesCount,
+            positionFrom: positionTo);
+        //timeout between commands
+        await Future.delayed(const Duration(milliseconds: 100));
         //after killed piece removed - move the killer
-        _service.moveChessPiece(1, positionFrom, 2, positionTo);
+
+        _service.moveChessPiece(2, positionFrom, 2, positionTo);
+        // add this move into reSetter
+        BoardReSetter.addMove(
+            boardFrom: 2,
+            boardTo: 2,
+            positionTo: positionTo,
+            positionFrom: positionFrom);
         //increment _killedPieceCount to move next killed piece to an empty field on the second board
         _killedPiecesCount++;
+      } else {
+        _service.moveChessPiece(2, positionFrom, 2, positionTo);
+        // add this move into reSetter
+        BoardReSetter.addMove(
+            boardFrom: 2,
+            boardTo: 2,
+            positionTo: positionTo,
+            positionFrom: positionFrom);
       }
     } catch (e) {
       _connectionErrorMessage = e.toString();
     }
+  }
+
+  int positionFromMatrix(int row, int col) {
+    return (col + 1) + 8 * (7 - row);
   }
 
   /// Clears the selected and valid move states.
@@ -322,6 +350,10 @@ class ChessBoardViewModel extends ChangeNotifier {
   /// Resets the selected field state.
   /// '-1' means nothing is selected.
   void reset() {
+    BoardReSetter.reset((event) {
+      _service.moveChessPiece(
+          event.boardFrom, event.positionFrom, event.boardTo, event.positionTo);
+    });
     _selectedFieldIndex = -1;
     _selectedFieldRow = -1;
     _selectedFieldColumn = -1;

@@ -1,5 +1,7 @@
+import 'dart:developer';
+
 import 'package:chess316/core/constants/app_constants.dart';
-import 'package:tcp_socket_connection/tcp_socket_connection.dart';
+import 'tcp_connection.dart';
 
 class ChessRobotService {
   ChessRobotService() {
@@ -18,11 +20,14 @@ class ChessRobotService {
   }
 
   final TcpSocketConnection _tcpSocketConnection =
-      TcpSocketConnection(_ip, _port);
+      TcpSocketConnection('10.16.0.23', 10003);
 
-  Future<void> startConnection() async {
+  void startConnection() async {
     _tcpSocketConnection.enableConsolePrint(true);
-    await _tcpSocketConnection.connect(15000, _messageReceived, attempts: 3);
+    if (await _tcpSocketConnection.canConnect(5000, attempts: 10)) {
+      await _tcpSocketConnection.connect(5000, _messageReceived, attempts: 10);
+      log(_tcpSocketConnection.isConnected().toString());
+    }
   }
 
   void _messageReceived(String data) {}
@@ -30,6 +35,7 @@ class ChessRobotService {
   Future<void> moveChessPiece(
       int boardFrom, int positionFrom, int boardTo, int positionTo) async {
     final command = 'Move,$boardFrom,$positionFrom,$boardTo,$positionTo\r\n';
+    log(command);
     _tcpSocketConnection.sendMessage(command);
   }
 }
