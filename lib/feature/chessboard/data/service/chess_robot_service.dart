@@ -20,7 +20,7 @@ class ChessRobotService {
   }
 
   final TcpSocketConnection _tcpSocketConnection =
-      TcpSocketConnection('10.16.0.23', 10003);
+      TcpSocketConnection(_ip, _port);
 
   void startConnection() async {
     _tcpSocketConnection.enableConsolePrint(true);
