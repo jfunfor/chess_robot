@@ -105,7 +105,7 @@ class TcpSocketConnection{
     _connected=true;
     _printData("Socket successfully connected");
     _server!.listen((List<int> event) async {
-      String received=(utf8.decode(event));
+      String received=(ascii.decode(event));
       _printData("Message received: "+received);
       callback(received);
     });
