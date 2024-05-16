@@ -35,7 +35,6 @@ class ChessRobotService {
   Future<void> moveChessPiece(
       int boardFrom, int positionFrom, int boardTo, int positionTo) async {
     final command = 'Move,$boardFrom,$positionFrom,$boardTo,$positionTo\r\n';
-    log(command);
     _tcpSocketConnection.sendMessage(command);
   }
 }
