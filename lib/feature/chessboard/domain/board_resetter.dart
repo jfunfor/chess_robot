@@ -24,7 +24,7 @@ abstract class BoardReSetter {
           positionTo: move.positionFrom,
           positionFrom: move.positionTo);
       Future.delayed(
-        const Duration(milliseconds: 100),
+        const Duration(milliseconds: 500),
         () => reSetter.call(reversedMove),
       );
     }
@@ -44,4 +44,9 @@ class BoardEvent {
     required this.positionTo,
     required this.positionFrom,
   });
+
+  @override
+  String toString(){
+    return '{$positionTo, $positionFrom, $boardTo, $boardFrom}';
+  }
 }

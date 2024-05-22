@@ -30,7 +30,9 @@ class ChessRobotService {
     }
   }
 
-  void _messageReceived(String data) {}
+  String _messageReceived(String data) {
+    return data;
+  }
 
   Future<void> moveChessPiece(
       int boardFrom, int positionFrom, int boardTo, int positionTo) async {
