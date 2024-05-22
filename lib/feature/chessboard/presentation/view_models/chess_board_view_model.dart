@@ -149,7 +149,7 @@ class ChessBoardViewModel extends ChangeNotifier {
 
   ///Moves the piece to a given [row] and [column] on the screen
   ///Calls [movePieceWithRobot] method to move a piece on a real chess board with Robot
-  void movePiece(int row, int column) {
+  void movePiece(int row, int column) async {
     if (_chessBoard[_selectedFieldRow][_selectedFieldColumn]!.type ==
         ChessPieceType.king) {
       if (_chessBoard[_selectedFieldRow][_selectedFieldColumn]!.isWhite) {
@@ -159,7 +159,7 @@ class ChessBoardViewModel extends ChangeNotifier {
       }
     }
 
-    movePieceWithRobot(row, column);
+    await movePieceWithRobot(row, column);
 
     _chessBoard[row][column] =
         _chessBoard[_selectedFieldRow][_selectedFieldColumn];
@@ -293,7 +293,7 @@ class ChessBoardViewModel extends ChangeNotifier {
   ///Move chess piece with Robot
   ///Moves killed piece to the second chess board. Then moves the killer
   ///Will throw an exception if there is no connection to Robot with TCP/IP
-  void movePieceWithRobot(int row, int column) async {
+  Future<void> movePieceWithRobot(int row, int column) async {
     try {
       _service.checkConnection();
       final int positionFrom =
@@ -357,6 +357,7 @@ class ChessBoardViewModel extends ChangeNotifier {
     _selectedFieldIndex = -1;
     _selectedFieldRow = -1;
     _selectedFieldColumn = -1;
+    _killedPiecesCount = 1;
   }
 
   /// Restarts the game by initializing the chessboard again.
