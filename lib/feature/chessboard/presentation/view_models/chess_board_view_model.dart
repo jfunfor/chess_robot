@@ -16,6 +16,7 @@ class ChessBoardViewModel extends ChangeNotifier {
   List<int> _blackKingPosition = [0, 4];
   bool _check = false;
   bool _checkMate = false;
+  bool _isFieldEnabled = true;
 
   final ChessRobotService _service = ChessRobotService();
   int _killedPiecesCount = 1;
@@ -41,6 +42,8 @@ class ChessBoardViewModel extends ChangeNotifier {
   bool get checkMate => _checkMate;
 
   bool get isWhiteTurn => _isWhiteTurn;
+
+  bool get isFieldEnabled => _isFieldEnabled;
 
   String get alertMessage => _alertMessage;
 
@@ -159,13 +162,21 @@ class ChessBoardViewModel extends ChangeNotifier {
       }
     }
 
-    await movePieceWithRobot(row, column);
+    final robotRow = row;
+    final robotColumn = _selectedFieldRow;
+    final robotSelectedFieldRow = _selectedFieldRow;
+    final robotSelectedFieldColumn = _selectedFieldColumn;
 
     _chessBoard[row][column] =
         _chessBoard[_selectedFieldRow][_selectedFieldColumn];
 
     _chessBoard[_selectedFieldRow][_selectedFieldColumn] = null;
+    _isFieldEnabled = false;
+    notifyListeners();
 
+    await movePieceWithRobot(
+        robotRow, robotColumn, robotSelectedFieldRow, robotSelectedFieldColumn);
+    //await Future.delayed(Duration(seconds: 2));
     if (isCheck(!_isWhiteTurn)) {
       _check = true;
       _alertMessage = 'Check';
@@ -180,7 +191,7 @@ class ChessBoardViewModel extends ChangeNotifier {
     }
 
     _isWhiteTurn = !_isWhiteTurn;
-
+    _isFieldEnabled = true;
     clear();
     notifyListeners();
   }
@@ -293,26 +304,23 @@ class ChessBoardViewModel extends ChangeNotifier {
   ///Move chess piece with Robot
   ///Moves killed piece to the second chess board. Then moves the killer
   ///Will throw an exception if there is no connection to Robot with TCP/IP
-  Future<void> movePieceWithRobot(int row, int column) async {
+  Future<void> movePieceWithRobot(
+      int row, int column, int selectedRow, int selectedColumn) async {
     try {
       _service.checkConnection();
-      final int positionFrom =
-          positionFromMatrix(_selectedFieldRow, _selectedFieldColumn);
+      final int positionFrom = positionFromMatrix(selectedRow, selectedColumn);
       final int positionTo = positionFromMatrix(row, column);
       if (_chessBoard[row][column] != null) {
         //move killed piece from the board
-        _service.moveChessPiece(2, positionTo, 1, _killedPiecesCount);
+        await _service.moveChessPiece(2, positionTo, 1, _killedPiecesCount);
         // add this move into reSetter
         BoardReSetter.addMove(
             boardFrom: 2,
             boardTo: 1,
             positionTo: _killedPiecesCount,
             positionFrom: positionTo);
-        //timeout between commands
-        await Future.delayed(const Duration(milliseconds: 100));
         //after killed piece removed - move the killer
-
-        _service.moveChessPiece(2, positionFrom, 2, positionTo);
+        await _service.moveChessPiece(2, positionFrom, 2, positionTo);
         // add this move into reSetter
         BoardReSetter.addMove(
             boardFrom: 2,
@@ -322,7 +330,7 @@ class ChessBoardViewModel extends ChangeNotifier {
         //increment _killedPieceCount to move next killed piece to an empty field on the second board
         _killedPiecesCount++;
       } else {
-        _service.moveChessPiece(2, positionFrom, 2, positionTo);
+        await _service.moveChessPiece(2, positionFrom, 2, positionTo);
         // add this move into reSetter
         BoardReSetter.addMove(
             boardFrom: 2,
@@ -350,8 +358,8 @@ class ChessBoardViewModel extends ChangeNotifier {
   /// Resets the selected field state.
   /// '-1' means nothing is selected.
   void reset() {
-    BoardReSetter.reset((event) {
-      _service.moveChessPiece(
+    BoardReSetter.reset((event) async {
+      await _service.moveChessPiece(
           event.boardFrom, event.positionFrom, event.boardTo, event.positionTo);
     });
     _selectedFieldIndex = -1;
