@@ -32,9 +32,9 @@ class AlertDialogContent extends StatelessWidget {
               OutlinedButton(
                 style: ButtonStyle(
                   backgroundColor:
-                      MaterialStateProperty.all<Color>(AppColors.darkBrown),
+                      WidgetStateProperty.all<Color>(AppColors.darkBrown),
                   foregroundColor:
-                      MaterialStateProperty.all<Color>(AppColors.white),
+                      WidgetStateProperty.all<Color>(AppColors.white),
                 ),
                 onPressed: () {
                   Navigator.of(context).pop();
@@ -48,9 +48,9 @@ class AlertDialogContent extends StatelessWidget {
                 onPressed: onConfirmTap,
                 style: ButtonStyle(
                   backgroundColor:
-                      MaterialStateProperty.all<Color>(AppColors.darkBrown),
+                      WidgetStateProperty.all<Color>(AppColors.darkBrown),
                   foregroundColor:
-                      MaterialStateProperty.all<Color>(AppColors.white),
+                      WidgetStateProperty.all<Color>(AppColors.white),
                 ),
                 child: const Text('Yes'),
               ),

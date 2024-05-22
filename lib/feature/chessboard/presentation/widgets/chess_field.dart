@@ -6,7 +6,7 @@ import '../../domain/models/chess_pieces.dart';
 class ChessField extends StatelessWidget {
   final bool isFilled;
   final ChessPiece? piece;
-  final Function() onTap;
+  final Function()? onTap;
   final bool isSelected;
   final bool isValidMove;
 
