@@ -65,7 +65,7 @@ class TcpSocketConnection {
     });
   }
 
-  /// Stops the connection and closes the socket
+  /// Stops the connection and close the socket
   void disconnect() {
     if (_server != null) {
       try {
@@ -100,6 +100,7 @@ class TcpSocketConnection {
     }
     return response;
   }
+
 
   /// Test the connection. It will try to connect to the endpoint and if it does, it will disconnect and return 'true' (otherwise false)
   ///  * @param  timeOut  the amount of time to attempt the connection in milliseconds

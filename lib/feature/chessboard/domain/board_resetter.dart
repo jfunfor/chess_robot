@@ -1,9 +1,8 @@
 import 'dart:collection';
 
 abstract class BoardReSetter {
-  /// Stack of moves
   static final Queue<BoardEvent> _moves = Queue();
-  /// adds move to stack of moves
+
   static void addMove({
     required int boardFrom,
     required int boardTo,
@@ -17,15 +16,14 @@ abstract class BoardReSetter {
         positionFrom: positionFrom));
   }
 
-  /// converts moves into reverse moves
-  static void reset(void Function(BoardEvent) reSetter) {
+  static void reset(Future<void> Function(BoardEvent) reSetter) async {
     for (final move in _moves) {
       final reversedMove = BoardEvent(
           boardFrom: move.boardTo,
           boardTo: move.boardFrom,
           positionTo: move.positionFrom,
           positionFrom: move.positionTo);
-      reSetter.call(reversedMove);
+     await reSetter.call(reversedMove);
     }
     _moves.clear();
   }
