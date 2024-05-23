@@ -105,6 +105,7 @@ class ChessBoardViewModel extends ChangeNotifier {
     _selectedFieldColumn = -1;
     _selectedFieldIndex = -1;
     _isWhiteTurn = true;
+    _killedPiecesCount = 1;
     _whiteKingPosition = [7, 4];
     _blackKingPosition = [0, 4];
     _check = false;
@@ -121,7 +122,7 @@ class ChessBoardViewModel extends ChangeNotifier {
     final row = index ~/ 8;
     final column = index % 8;
     if (_selectedPieces[index]) {
-      reset();
+      setSelectedToDefault();
       clear();
     } else {
       if (_validMoves[index] == true &&
@@ -163,9 +164,13 @@ class ChessBoardViewModel extends ChangeNotifier {
     }
 
     final robotRow = row;
-    final robotColumn = _selectedFieldRow;
+    final robotColumn = column;
     final robotSelectedFieldRow = _selectedFieldRow;
     final robotSelectedFieldColumn = _selectedFieldColumn;
+    final robotPiece = _chessBoard[row][column];
+
+    // await movePieceWithRobot(
+    //     robotRow, robotColumn, robotSelectedFieldRow, robotSelectedFieldColumn, piece);
 
     _chessBoard[row][column] =
         _chessBoard[_selectedFieldRow][_selectedFieldColumn];
@@ -174,9 +179,8 @@ class ChessBoardViewModel extends ChangeNotifier {
     _isFieldEnabled = false;
     notifyListeners();
 
-    await movePieceWithRobot(
-        robotRow, robotColumn, robotSelectedFieldRow, robotSelectedFieldColumn);
-    //await Future.delayed(Duration(seconds: 2));
+
+
     if (isCheck(!_isWhiteTurn)) {
       _check = true;
       _alertMessage = 'Check';
@@ -189,6 +193,9 @@ class ChessBoardViewModel extends ChangeNotifier {
       _alertMessage = 'Check Mate';
       _checkMate = true;
     }
+
+    await movePieceWithRobot(
+        robotRow, robotColumn, robotSelectedFieldRow, robotSelectedFieldColumn, robotPiece);
 
     _isWhiteTurn = !_isWhiteTurn;
     _isFieldEnabled = true;
@@ -305,12 +312,12 @@ class ChessBoardViewModel extends ChangeNotifier {
   ///Moves killed piece to the second chess board. Then moves the killer
   ///Will throw an exception if there is no connection to Robot with TCP/IP
   Future<void> movePieceWithRobot(
-      int row, int column, int selectedRow, int selectedColumn) async {
+      int row, int column, int selectedRow, int selectedColumn, ChessPiece? piece) async {
     try {
       _service.checkConnection();
       final int positionFrom = positionFromMatrix(selectedRow, selectedColumn);
       final int positionTo = positionFromMatrix(row, column);
-      if (_chessBoard[row][column] != null) {
+      if (piece != null) {
         //move killed piece from the board
         await _service.moveChessPiece(2, positionTo, 1, _killedPiecesCount);
         // add this move into reSetter
@@ -357,21 +364,25 @@ class ChessBoardViewModel extends ChangeNotifier {
 
   /// Resets the selected field state.
   /// '-1' means nothing is selected.
-  void reset() {
+  /// Moves chess pieces back to its default position
+  void placePiecesToDefault() {
     BoardReSetter.reset((event) async {
       await _service.moveChessPiece(
           event.boardFrom, event.positionFrom, event.boardTo, event.positionTo);
     });
+  }
+
+  void setSelectedToDefault(){
     _selectedFieldIndex = -1;
     _selectedFieldRow = -1;
     _selectedFieldColumn = -1;
-    _killedPiecesCount = 1;
   }
 
   /// Restarts the game by initializing the chessboard again.
   void restartGame() {
     clear();
-    reset();
+    placePiecesToDefault();
+    setSelectedToDefault();
     initChessBoard();
   }
 }

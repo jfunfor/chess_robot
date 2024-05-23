@@ -16,14 +16,14 @@ abstract class BoardReSetter {
         positionFrom: positionFrom));
   }
 
-  static void reset(void Function(BoardEvent) reSetter) {
+  static void reset(Future<void> Function(BoardEvent) reSetter) async {
     for (final move in _moves) {
       final reversedMove = BoardEvent(
           boardFrom: move.boardTo,
           boardTo: move.boardFrom,
           positionTo: move.positionFrom,
           positionFrom: move.positionTo);
-      reSetter.call(reversedMove);
+     await reSetter.call(reversedMove);
     }
     _moves.clear();
   }
