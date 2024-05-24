@@ -176,7 +176,6 @@ class ChessBoardViewModel extends ChangeNotifier {
 
     await movePieceWithRobot(
         robotRow, robotColumn, robotSelectedFieldRow, robotSelectedFieldColumn);
-    //await Future.delayed(Duration(seconds: 2));
     if (isCheck(!_isWhiteTurn)) {
       _check = true;
       _alertMessage = 'Check';
