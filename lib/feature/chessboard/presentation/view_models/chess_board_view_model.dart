@@ -301,7 +301,7 @@ class ChessBoardViewModel extends ChangeNotifier {
   }
 
   ///Move chess piece with Robot
-  ///Moves killed piece to the second chess board. Then moves the killer
+  ///Firstly, moves killed piece to the second chess board. Then moves the killer
   ///Will throw an exception if there is no connection to Robot with TCP/IP
   Future<void> movePieceWithRobot(
       int row, int column, int selectedRow, int selectedColumn) async {
@@ -329,8 +329,9 @@ class ChessBoardViewModel extends ChangeNotifier {
         //increment _killedPieceCount to move next killed piece to an empty field on the second board
         _killedPiecesCount++;
       } else {
+        ///if none of pieces are killed, moves only one piece
         await _service.moveChessPiece(2, positionFrom, 2, positionTo);
-        // add this move into reSetter
+        ///add this move into reSetter
         BoardReSetter.addMove(
             boardFrom: 2,
             boardTo: 2,
@@ -356,6 +357,7 @@ class ChessBoardViewModel extends ChangeNotifier {
 
   /// Resets the selected field state.
   /// '-1' means nothing is selected.
+  /// Moves pieces back to its initial position with chess robot
   void reset() {
     BoardReSetter.reset((event) async {
       await _service.moveChessPiece(

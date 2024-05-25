@@ -65,7 +65,7 @@ class TcpSocketConnection {
     });
   }
 
-  /// Stops the connection and close the socket
+  /// Stops the connection and closes the socket
   void disconnect() {
     if (_server != null) {
       try {
@@ -100,22 +100,6 @@ class TcpSocketConnection {
     }
     return response;
   }
-
-  // Future<String> listenServer() {
-  //   final Completer<String> completer = Completer<String>();
-  //   print('new complete');
-  //   _server!.listen((List<int> event) async {
-  //     String received = (ascii.decode(event));
-  //     _printData("Message received: $received");
-  //     if (!completer.isCompleted) {
-  //       print('notCompleted still ');
-  //       completer.complete(received);
-  //       print('now completed!!');
-  //     }
-  //   });
-  //   print("${completer.future} comp future");
-  //   return completer.future;
-  // }
 
   /// Test the connection. It will try to connect to the endpoint and if it does, it will disconnect and return 'true' (otherwise false)
   ///  * @param  timeOut  the amount of time to attempt the connection in milliseconds
