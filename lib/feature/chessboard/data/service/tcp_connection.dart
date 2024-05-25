@@ -101,6 +101,7 @@ class TcpSocketConnection {
     return response;
   }
 
+
   /// Test the connection. It will try to connect to the endpoint and if it does, it will disconnect and return 'true' (otherwise false)
   ///  * @param  timeOut  the amount of time to attempt the connection in milliseconds
   ///  * @param  attempts  the number of attempts before stop trying to connect. Default is 1.

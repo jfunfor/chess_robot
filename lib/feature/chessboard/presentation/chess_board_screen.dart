@@ -93,7 +93,7 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
                         !widget.model.isWhiteTurn &&
                                 widget.model.alertMessage.isEmpty
                             ? 'Black`s turn'
-                            : widget.model.alertMessage,
+                            : !widget.model.isWhiteTurn ? widget.model.alertMessage : '',
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
@@ -141,7 +141,7 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
                         widget.model.isWhiteTurn &&
                                 widget.model.alertMessage.isEmpty
                             ? 'White`s turn'
-                            : widget.model.alertMessage,
+                            : widget.model.isWhiteTurn ? widget.model.alertMessage : '',
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
