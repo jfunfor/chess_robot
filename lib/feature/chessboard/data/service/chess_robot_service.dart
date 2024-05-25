@@ -31,8 +31,7 @@ class ChessRobotService {
 
   /// callback function for receiving messages from server
   /// never used, but needed in [_tcpSocketConnection.connect] method
-  String _messageReceived(String data) {
-    return data;
+  void _messageReceived(String data) {
   }
 
   ///sends message to server with valid command
