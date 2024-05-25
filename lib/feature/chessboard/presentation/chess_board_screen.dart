@@ -93,7 +93,7 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
                         !widget.model.isWhiteTurn &&
                                 widget.model.alertMessage.isEmpty
                             ? 'Black`s turn'
-                            : widget.model.alertMessage,
+                            : !widget.model.isWhiteTurn ? widget.model.alertMessage : '',
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
@@ -119,10 +119,14 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
                             piece: getPiece(index),
                             isSelected:
                                 widget.model.selectedFieldIndex == index,
-                            onTap: () {
-                              widget.model.selectPiece(index);
-                            },
-                            isValidMove: widget.model.validMoves[index],
+                            onTap: widget.model.isFieldEnabled
+                                ? () {
+                                    widget.model.selectPiece(index);
+                                  }
+                                : null,
+                            isValidMove: widget.model.isFieldEnabled
+                                ? widget.model.validMoves[index]
+                                : false,
                           );
                         });
                   },
@@ -137,7 +141,7 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
                         widget.model.isWhiteTurn &&
                                 widget.model.alertMessage.isEmpty
                             ? 'White`s turn'
-                            : widget.model.alertMessage,
+                            : widget.model.isWhiteTurn ? widget.model.alertMessage : '',
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
