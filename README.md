@@ -138,7 +138,7 @@ lib
 │    └── chessboard
 │        ├── data
 │        ├── domain
-│        └── presentaion.dart
+│        └── presentaion
 └── main.dart
 
 ```
