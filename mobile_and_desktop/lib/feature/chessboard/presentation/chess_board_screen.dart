@@ -1,18 +1,59 @@
 import 'dart:math';
 
+import 'package:chess316/feature/chessboard/data/service/chess_robot_service.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_pieces.dart';
 import 'package:chess316/feature/chessboard/presentation/view_models/chess_board_view_model.dart';
 import 'package:chess316/feature/chessboard/presentation/widgets/alert_dialog_content.dart';
 import 'package:chess316/feature/chessboard/presentation/widgets/chess_field.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class ChessBoardPage extends StatelessWidget {
-  const ChessBoardPage({super.key});
+  final ChessRobotService robotService;
+
+  const ChessBoardPage({super.key, required this.robotService});
 
   @override
   Widget build(BuildContext context) {
-    return ChessBoardScreen(model: ChessBoardViewModel());
+    return ChangeNotifierProvider(
+      create: (context) => ChessBoardViewModel(robotService: robotService),
+      child:
+          Consumer<ChessBoardViewModel>(builder: (context, viewModel, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Chess Robot 316'),
+            backgroundColor: Colors.brown[800],
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () => _showResetDialog(context, viewModel),
+              )
+            ],
+          ),
+          body: _buildChessBoard(viewModel),
+        );
+      }),
+    );
+  }
+
+  Widget _buildChessBoard(ChessBoardViewModel viewModel) {
+    return ChessBoardScreen(
+      key: const Key('chessBoard'),
+      model: viewModel,
+    );
+  }
+
+  void _showResetDialog(BuildContext context, ChessBoardViewModel viewModel) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialogContent(
+        onConfirmTap: () {
+          viewModel.restartGame();
+          Navigator.of(context).pop();
+        },
+      ),
+    );
   }
 }
 
@@ -40,6 +81,10 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
     return null;
   }
 
+  void _updateUI() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     widget.model.addListener(() {
@@ -56,18 +101,28 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
   }
 
   @override
+  void dispose() {
+    // 仅移除监听，不处理model的dispose
+    widget.model.removeListener(_updateUI);
+    super.dispose();
+  }
+
+  @override
   void didUpdateWidget(covariant ChessBoardScreen oldWidget) {
-    oldWidget.model.dispose();
-    widget.model.addListener(() {
-      if (widget.model.checkMate) {
-        _showResetGameDialog(context, onConfirmTap: () {
-          widget.model.restartGame();
-          Navigator.of(context)
-            ..pop()
-            ..pop();
-        });
-      }
-    });
+    if (oldWidget.model != widget.model) {
+      oldWidget.model.removeListener(_updateUI);
+      widget.model.addListener(() {
+        if (widget.model.checkMate) {
+          _showResetGameDialog(context, onConfirmTap: () {
+            widget.model.restartGame();
+            Navigator.of(context)
+              ..pop()
+              ..pop();
+          });
+        }
+      });
+    }
+
     super.didUpdateWidget(oldWidget);
   }
 
@@ -93,7 +148,9 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
                         !widget.model.isWhiteTurn &&
                                 widget.model.alertMessage.isEmpty
                             ? 'Black`s turn'
-                            : !widget.model.isWhiteTurn ? widget.model.alertMessage : '',
+                            : !widget.model.isWhiteTurn
+                                ? widget.model.alertMessage
+                                : '',
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,
@@ -141,7 +198,9 @@ class _ChessBoardScreenState extends State<ChessBoardScreen> {
                         widget.model.isWhiteTurn &&
                                 widget.model.alertMessage.isEmpty
                             ? 'White`s turn'
-                            : widget.model.isWhiteTurn ? widget.model.alertMessage : '',
+                            : widget.model.isWhiteTurn
+                                ? widget.model.alertMessage
+                                : '',
                         style: const TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,

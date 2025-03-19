@@ -2,7 +2,7 @@ import 'package:chess316/feature/chessboard/data/service/chess_robot_service.dar
 import 'package:chess316/feature/chessboard/domain/board_resetter.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_piece_enum.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_pieces.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart'; // in order to use 'kDebugMode'
 
 class ChessBoardViewModel extends ChangeNotifier {
   List<List<ChessPiece?>> _chessBoard = [];
@@ -18,7 +18,7 @@ class ChessBoardViewModel extends ChangeNotifier {
   bool _checkMate = false;
   bool _isFieldEnabled = true;
 
-  final ChessRobotService _service = ChessRobotService();
+  final ChessRobotService _service;
   int _killedPiecesCount = 1;
 
   String _alertMessage = '';
@@ -49,7 +49,9 @@ class ChessBoardViewModel extends ChangeNotifier {
 
   String get connectionErrorMessage => _connectionErrorMessage;
 
-  ChessBoardViewModel() {
+  ChessBoardViewModel({required ChessRobotService robotService // required
+      })
+      : _service = robotService {
     initChessBoard();
   }
 
@@ -179,8 +181,6 @@ class ChessBoardViewModel extends ChangeNotifier {
     _isFieldEnabled = false;
     notifyListeners();
 
-
-
     if (isCheck(!_isWhiteTurn)) {
       _check = true;
       _alertMessage = 'Check';
@@ -194,8 +194,8 @@ class ChessBoardViewModel extends ChangeNotifier {
       _checkMate = true;
     }
 
-    await movePieceWithRobot(
-        robotRow, robotColumn, robotSelectedFieldRow, robotSelectedFieldColumn, robotPiece);
+    await movePieceWithRobot(robotRow, robotColumn, robotSelectedFieldRow,
+        robotSelectedFieldColumn, robotPiece);
 
     _isWhiteTurn = !_isWhiteTurn;
     _isFieldEnabled = true;
@@ -311,8 +311,8 @@ class ChessBoardViewModel extends ChangeNotifier {
   ///Move chess piece with Robot
   ///Moves killed piece to the second chess board. Then moves the killer
   ///Will throw an exception if there is no connection to Robot with TCP/IP
-  Future<void> movePieceWithRobot(
-      int row, int column, int selectedRow, int selectedColumn, ChessPiece? piece) async {
+  Future<void> movePieceWithRobot(int row, int column, int selectedRow,
+      int selectedColumn, ChessPiece? piece) async {
     try {
       _service.checkConnection();
       final int positionFrom = positionFromMatrix(selectedRow, selectedColumn);
@@ -372,7 +372,7 @@ class ChessBoardViewModel extends ChangeNotifier {
     });
   }
 
-  void setSelectedToDefault(){
+  void setSelectedToDefault() {
     _selectedFieldIndex = -1;
     _selectedFieldRow = -1;
     _selectedFieldColumn = -1;
