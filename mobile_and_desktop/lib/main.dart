@@ -1,12 +1,21 @@
+import 'package:chess316/core/service_factory.dart';
+import 'package:chess316/feature/chessboard/data/service/chess_robot_service.dart';
 import 'package:chess316/feature/chessboard/presentation/chess_board_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
-  runApp(const MyApp());
+  const useMock = bool.fromEnvironment('USE_MOCK', defaultValue: false);
+
+  runApp(MyApp(
+    robotService: createChessRobotService(useMock: useMock),
+  ));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final ChessRobotService robotService;
+
+  const MyApp({super.key, required this.robotService});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -15,7 +24,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
       ),
-      home: const ChessBoardPage(),
+      home: ChessBoardPage(robotService: robotService), // key
     );
   }
 }
