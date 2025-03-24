@@ -1,0 +1,110 @@
+asyncapi: 2.6.0
+info:
+  title: WebSocket API for Chess Game
+  description: API for managing a chess game via WebSocket
+  version: 1.0.0
+
+servers:
+  - url: ws://localhost:8000
+    description: WebSocket server
+    protocol: websocket
+
+channels:
+  /:
+    subscribe:
+      summary: Establish a connection to the chess game server and receive updates
+      description: Clients receive their piece color upon connection and updates after other players' moves
+      message:
+        oneOf:
+          - $ref: '#/components/messages/init_game'
+          - $ref: '#/components/messages/update_game_state'
+    publish:
+      summary: Send game operations to the server
+      description: Clients can send move information or request board state
+      message:
+        oneOf:
+          - $ref: '#/components/messages/make_move'
+          - $ref: '#/components/messages/get_board_state'
+          - $ref: '#/components/messages/error'
+
+components:
+  messages:
+    init_game:
+      summary: Connection established message
+      description: Includes the player's piece color
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            constant: init_game
+          data:
+            type: object
+            properties:
+              color:
+                type: string
+                description: Player's piece color (w or b)
+
+    make_move:
+      summary: Make a move message
+      description: Sends move information to the server
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            constant: make_move
+          data:
+            type: object
+            properties:
+              pos_start:
+                type: string
+                description: Starting position of the piece
+              pos_end:
+                type: string
+                description: Ending position of the piece
+
+    get_board_state:
+      summary: Get board state message
+      description: Retrieves the current state of the board
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            constant: get_board_state
+
+    update_game_state:
+      summary: Asynchronous game state update message
+      description: Clients receive the updated board state after another player's move
+      payload:
+        type: object
+        properties:
+          type:
+            type: string
+            constant: update_game_state
+          data:
+            type: object
+            properties:
+              board_state:
+                type: object
+                properties:
+                  fen:
+                    type: string
+                    description: FEN notation of the board state
+              player_color:
+                type: string
+                description: Current player (w or b)
+
+    error:
+      summary: Error message
+      description: Includes error details
+      payload:
+        type: object
+        properties:
+          error:
+            type: object
+            properties:
+              message:
+                type: string
+                description: Error message
