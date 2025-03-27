@@ -1,5 +1,6 @@
 import uuid
 from enum import Enum
+import chess
 
 
 class Colors(Enum):
@@ -20,6 +21,7 @@ class Session:
         self.players = []
         self.is_active = False
         self.current_player = None
+        self.board = chess.Board()
     
     def add_player(self, websocket):
         if not self.active_players:
@@ -38,5 +40,17 @@ class Session:
         self.active_players -= 1
         self.is_active = False
 
-
+    def return_board(self): #получение состояния доски
+        return self.board.fen()
     
+    def make_move(self,move):   #ход
+         try:
+            self.board.push_uci(move)
+            return True
+         except ValueError:
+            return False
+
+    def check_gameover(self): # проверка на конец игры
+        return self.board.is_game_over() # Возвращает "False" и "True"
+
+ 
