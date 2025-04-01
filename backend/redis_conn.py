@@ -11,7 +11,11 @@ class RedisConnector:
     def connect(self):
         if not self.client:
             try:
-                self.client = redis.Redis(host=self.host, port=self.port, db=self.db)
+                self.client = redis.Redis(
+                    host=self.host,
+                    port=self.port,
+                    db=self.db
+                )
                 self.client.ping()
                 print(f"Connected to Redis db at {self.host}:{self.port}")
             except Exception as e:

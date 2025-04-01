@@ -13,7 +13,7 @@ class Player:
         self.websocket = websocket
         self.figures_color = figures_color
 
-#Прописать логику шахматного поля
+
 class Session:
     def __init__(self):
         self.id = uuid.uuid1()
@@ -22,35 +22,44 @@ class Session:
         self.is_active = False
         self.current_player = None
         self.board = chess.Board()
-    
+
     def add_player(self, websocket):
         if not self.active_players:
-            new_client = Player(websocket=websocket, figures_color=Colors.WHITE)
+            new_client = Player(
+                websocket=websocket,
+                figures_color=Colors.WHITE
+            )
             self.current_player = 0
         else:
-            new_client = Player(websocket=websocket, figures_color=Colors.BLACK)
+            new_client = Player(
+                websocket=websocket,
+                figures_color=Colors.BLACK
+            )
             self.is_active = True
-        
+
         self.players.append(new_client)
         self.active_players += 1
 
     def delete_player(self, websocket):
-        player = next((player for player in self.players if self.players.websocket == websocket), None)
+        player = next(
+            (player
+             for player in self.players
+             if self.players.websocket == websocket),
+            None
+        )
         self.players[self.players.index(player)] = None
         self.active_players -= 1
         self.is_active = False
 
-    def return_board(self): #получение состояния доски
+    def return_board(self):
         return self.board.fen()
-    
-    def make_move(self,move):   #ход
-         try:
+
+    def make_move(self, move):
+        try:
             self.board.push_uci(move)
             return True
-         except ValueError:
+        except ValueError:
             return False
 
-    def check_gameover(self): # проверка на конец игры
-        return self.board.is_game_over() # Возвращает "False" и "True"
-
- 
+    def check_gameover(self):
+        return self.board.is_game_over()
