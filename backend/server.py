@@ -6,7 +6,7 @@ from redis_conn import RedisConnector
 from robot_conn import RobotConnector
 from game import *
 
-LETTERS = "ABCDEFGH"
+LETTERS = "abcdefgh"
 
 
 def change_format_cell(cell):
@@ -48,22 +48,31 @@ class WebSocketServer:
                         if action is None:
                             raise Exception("The required field action is missing")
                         if action == 'move':
-                            pos_start, pos_end = message.get('pos_start'), message.get('pos_end')
+                            pos_start, pos_end = message.get('pos_start').lower(), message.get('pos_end').lower()
                             if pos_start is None or pos_end is None:
                                 raise Exception("Mandatory fields pos_start and pos_end are missing")
+                            
+                            if self.session.make_move(pos_start+pos_end) != True:
+                                 raise Exception("Invalid fields pos_start and pos_end. Please try again.")
+                            
+                            self.session.make_move(pos_start+pos_end)
+
                             robot_response = self.robot_conn.send_and_receive(robot_request(1, change_format_cell(pos_start),
                                                                                                 1, change_format_cell(pos_end)))
+         
                             if robot_response == 'Done':
                                 #Сделать ход на доске и разослать состояние
-                                await self.send_message({"status":"success"}, self.session.players[self.session.current_player].websocket)
+                                await self.send_message({"status":"success",
+                                                                                        "stateBoard": f'{self.session.return_board()}'}, self.session.players[self.session.current_player].websocket)
                                 self.redis_conn.execute('RPUSH', self.session.players[self.session.current_player].figures_color.name, 
                                                               f"{pos_start}-{pos_end}")
                                 self.session.current_player = 1 - self.session.current_player
-                                await self.send_message({"status":"your_turn"}, self.session.players[self.session.current_player].websocket)
+                                await self.send_message({"status":"your_turn",
+                                                                                        "stateBoard": f'{self.session.return_board()}'}, self.session.players[self.session.current_player].websocket)
                             else:
                                 raise Exception("The robot failed to make a move")
                         elif action == 'board_state':
-                            pass
+                            pass#отправка состоянии доски от кого пришел запрос
 
 
 
