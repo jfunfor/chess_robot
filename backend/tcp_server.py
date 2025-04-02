@@ -1,5 +1,6 @@
 import socket
 
+
 def handle_client(client_socket, address):
     print(f"Подключение от {address}")
 
@@ -17,6 +18,7 @@ def handle_client(client_socket, address):
     client_socket.close()
     print(f"Клиент {address} отключился")
 
+
 def start_server():
     host = '127.0.0.1'
     port = 12345
@@ -33,6 +35,7 @@ def start_server():
         print(f"Новое подключение от {address}")
 
         handle_client(client_socket, address)
+
 
 if __name__ == "__main__":
     start_server()
