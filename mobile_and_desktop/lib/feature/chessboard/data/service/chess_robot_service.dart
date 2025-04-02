@@ -1,4 +1,5 @@
 import 'package:chess316/core/constants/app_constants.dart';
+
 import 'tcp_connection.dart';
 
 class ChessRobotService {
@@ -31,8 +32,7 @@ class ChessRobotService {
 
   /// callback function for receiving messages from server
   /// never used, but needed in [_tcpSocketConnection.connect] method
-  void _messageReceived(String data) {
-  }
+  void _messageReceived(String data) {}
 
   ///sends message to server with valid command
   Future<void> moveChessPiece(
