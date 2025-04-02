@@ -1,39 +1,46 @@
-
-<script setup>
-import ChessBoard from './components/ChessBoard.vue';
-</script>
-
-
-
 <template>
-  <ChessBoard />
+  <div id="app">
+    <header className="app-header">
+      <h1>Шахматная игра</h1>
+    </header>
+    <main className="app-main">
+      <ChessBoard/>
+    </main>
+  </div>
 </template>
 
+<script>
+import ChessBoard from './components/ChessBoard.vue';
+
+export default {
+  name: 'App',
+  components: {
+    ChessBoard
+  }
+};
+</script>
+
 <style scoped>
-header {
-  line-height: 1.5;
+/* Общие стили для приложения */
+#app {
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background-color: #f5f5f5;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+.app-header {
+  background-color: #333;
+  color: white;
+  padding: 20px;
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
+.app-main {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 </style>
