@@ -30,7 +30,7 @@ def robot_request(board_from, pos_from, board_to, pos_to):
 def decode_redis(data):
     return data.decode("utf-8")
 
-def return_move(square,session: Session,robot,piece_positions): #добавить условие если возвращаеться со 2 доски
+def return_piece(square,board: chess.Board,robot,piece_positions): #возврат фигуры на свое место
 
     current_square = square[0]
     figure = square[1]
@@ -56,24 +56,24 @@ def return_move(square,session: Session,robot,piece_positions): #добавит�
     if flag == False:#идем сюда в том случае если фигура не стоит ни на каком-либо своем месте
         for square in piece_positions[figure]:
             flag = False
-            piece = session.board.piece_at(change_format_cell(square)-1) # проверка клетки на наличие какой либо фигуры
+            piece = board.piece_at(change_format_cell(square)-1) # проверка клетки на наличие какой либо фигуры
         #проверяем можем ли мы поставить фигуру на клетку начинающуюю с начала списка
 
             #если там другая фигура и не того же типа убираем ее на свое место
             if piece != None and piece.symbol() != figure:
                 square = (square,piece.symbol())
-                return_move(square,session,robot,piece_positions)
+                return_piece(square,board,robot,piece_positions)
 
             
             #если там никого нет, ставим
             if piece == None:
                 if current_square != None:#если клетка не находиться на 2 доске
-                    session.board.remove_piece_at(change_format_cell(current_square)-1) #удаляем фигуру в логике в доске 1
+                    board.remove_piece_at(change_format_cell(current_square)-1) #удаляем фигуру в логике в доске 1
                 else:
                     current_square = square_board_2
 
 
-                session.board.set_piece_at(change_format_cell(square)-1,session.chess.Piece.from_symbol(figure)) # и добавляем ее
+                board.set_piece_at(change_format_cell(square)-1,chess.Piece.from_symbol(figure)) # и добавляем ее
 
                 robot_response = robot.send_and_receive( #переставляем фигуру на 1 доске
                 robot_request(
@@ -92,45 +92,64 @@ def return_move(square,session: Session,robot,piece_positions): #добавит�
             if flag == True:#установили фигуру на свое место
                 break
 
+def get_remaining_pieces_with_squares(board: chess.Board):#расположение фигур на доске
+    
+        remaining_pieces = []
+    
+        for square in chess.SQUARES:
+            piece = board.piece_at(square)
+            if piece is not None:
+                square_name = chess.square_name(square)  # например, "e4"
+                piece_symbol = piece.symbol()    # например, "P"
+                remaining_pieces.append((square_name, piece_symbol))
+    
+        return remaining_pieces
 
-def return_moves_all(session: Session,robot,piece_positions):
-    remaining_piece = session.get_remaining_pieces_with_squares()
+def return_all_pieces_on_them_places(board,robot,piece_positions):#возврат фигур на свои места 
+    remaining_piece = get_remaining_pieces_with_squares(board)
     
     for square in remaining_piece:
-        return_move(square,session,robot,piece_positions)
-        remaining_piece = session.get_remaining_pieces_with_squares()
+        return_piece(square,board,robot,piece_positions)
+        remaining_piece = get_remaining_pieces_with_squares(board)
     
-
-def move_all_to_current_board(Move_w,Move_b,session: Session):
+def return_to_current_board(Move_w,Move_b,board : chess.Board):# приход к текущему состоянию доски
 
     Move_w = list(reversed([move for move in Move_w if int(move[-1]) == 0]))
     Move_b = list(reversed([move for move in Move_b if int(move[-1]) == 0]))
 
+
     for w,b in zip_longest(Move_w,Move_b): #все ходы, чтобы прийти к текущему состоянию доски
         if w != None:
-            session.make_move(w[0:2]+w[3:5])
+            board.push_uci(w[0:2]+w[3:5])
 
         if b!= None:
-            session.make_move(b[0:2]+b[3:5])
-
-    return session.chess
+            board.push_uci(b[0:2]+b[3:5])
     
-def return_piece_from_2_to_1(session: Session,robot,piece_positions,dataBase):
+def return_piece_from_2_to_1(board: chess.Board,robot,piece_positions,dataBase): #возврат фигуры со 2 доски на 1 доску на свои места
     dead_pieces_white = [piece for piece in list(map(decode_redis,dataBase.lrange("WHITE",0,-1))) if int(piece[-1]) == 1]
     dead_pieces_black = [piece for piece in list(map(decode_redis,dataBase.lrange("BLACK",0,-1))) if int(piece[-1]) == 1]
 
     for piece in dead_pieces_white:
         square = [f"Board_2{piece[3:5]}",piece[len(piece)-3]]
-        return_move(square,session,robot,piece_positions)
+        return_piece(square,board,robot,piece_positions)
     
     for piece in dead_pieces_black:
         square = [f"Board_2{piece[3:5]}",piece[len(piece)-3]]
-        return_move(square,session,robot,piece_positions)
+        return_piece(square,board,robot,piece_positions)
+
+def return_board_to_original(): #возврат доски в исходное состояние
+    redis = RedisConnector()# подкл к БД
+    redis.connect()
+    dataBase = redis.client
+
+    robot = RobotConnector()# подкл к роботу
+    robot.connect()
+
+    itemsWhite = list(reversed(list(map(decode_redis,dataBase.lrange("WHITE",0,-1)))))
+    itemsBlack = list(reversed(list(map(decode_redis,dataBase.lrange("BLACK",0,-1)))))
+
     
-
-def return_original(itemsWhite,itemsBlack,robot,dataBase):
-
-    piece_positions = {
+    piece_positions = { # клетки на которых стоят фигуры
     # Белые фигуры
     "P": ["a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2"],  # Пешки
     "N": ["b1", "g1"],  # Кони
@@ -147,90 +166,14 @@ def return_original(itemsWhite,itemsBlack,robot,dataBase):
     "q": ["d8"],  # Ферзь
     "k": ["e8"],  # Король
     }
-    session = Session()
 
-    session.chess = move_all_to_current_board(itemsWhite,itemsBlack,session) #все ходы, чтобы прийти к текущему состоянию доски
+    board = chess.Board()
 
+    return_to_current_board(itemsWhite,itemsBlack,board) 
 
+    return_all_pieces_on_them_places(board,robot,piece_positions)
 
-    return_moves_all(session,robot,piece_positions)#возврат оставшихся фигур на свои места
-
-    return_piece_from_2_to_1(session,robot,piece_positions,dataBase)
-
-def return_original_type_2(itemsWhite,itemsBlack,robot): #возврат доски в обратном порядке
-    for i in range(len(itemsWhite)):
-        change_board_w = int(itemsWhite[i][-1])
-        change_board_b =  int(itemsBlack[i][-1])
-
-        if change_board_w < change_board_b: #возврат сначала белой потом черной
-            robot_response = robot.send_and_receive( 
-                robot_request(
-                    1,
-                    change_format_cell(itemsWhite[i][0:2]),
-                    1,
-                    change_format_cell(itemsWhite[i][3:5])
-                )
-            )
-            
-            
-            print(itemsWhite[i],itemsBlack[i])
-
-
-            if robot_response != "Done":
-                raise Exception("The robot failed to make remove figure")
-            
-            robot_response = robot.send_and_receive( 
-                robot_request(
-                    2,
-                    change_format_cell(itemsBlack[i][0:2]),
-                    1,
-                    change_format_cell(itemsBlack[i][3:5])
-                )
-            )
-
-            if robot_response != "Done":
-                raise Exception("The robot failed to make remove figure")
-
-        else: #возврат черной потом белой
-            robot_response = robot.send_and_receive( 
-                robot_request(
-                    1,
-                    change_format_cell(itemsWhite[i][0:2]),
-                    1,
-                    change_format_cell(itemsWhite[i][3:5])
-                )
-            )
-
-            print(itemsBlack[i],itemsWhite[i])
-           
-            if robot_response != "Done":
-                raise Exception("The robot failed to make remove figure")
-            
-            robot_response = robot.send_and_receive( #
-                robot_request(
-                    2,
-                    change_format_cell(itemsBlack[i][0:2]),
-                    1,
-                    change_format_cell(itemsBlack[i][3:5])
-                )
-            )
-
-            if robot_response != "Done":
-                raise Exception("The robot failed to make remove figure")
-
-def return_board_to_original(): #возврат доски в исходное состояние
-    redis = RedisConnector()
-    redis.connect()
-    dataBase = redis.client
-
-    robot = RobotConnector()
-    robot.connect()
-
-    itemsWhite = list(reversed(list(map(decode_redis,dataBase.lrange("WHITE",0,-1)))))
-    itemsBlack = list(reversed(list(map(decode_redis,dataBase.lrange("BLACK",0,-1)))))
-
-    
-    return_original(itemsWhite,itemsBlack,robot,dataBase)
+    return_piece_from_2_to_1(board,robot,piece_positions,dataBase)
 
 
 
@@ -433,4 +376,3 @@ class WebSocketServer:
         async with websockets.serve(self.handle_client, "localhost", 8765):
             print("WebSocket-сервер запущен на порту 8765")
             await asyncio.Future()
-
