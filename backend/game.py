@@ -21,7 +21,8 @@ class Session:
         self.players = []
         self.is_active = False
         self.current_player = None
-        self.board = chess.Board()
+        self.chess = chess
+        self.board = self.chess.Board()
 
     def add_player(self, websocket):
         if not self.active_players:
@@ -63,3 +64,10 @@ class Session:
 
     def check_gameover(self):
         return self.board.is_game_over()
+    
+    def check_square(self,pos):
+        if self.board.piece_at(chess.parse_square(pos)) != None:
+            return  self.board.piece_at(chess.parse_square(pos))
+        else:
+            return None
+        
