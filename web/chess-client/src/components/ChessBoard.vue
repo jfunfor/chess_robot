@@ -20,7 +20,7 @@
 
       <!-- Центральная часть: шахматная доска -->
       <div class="board-container">
-        <div id="board" class="chess-board"></div>
+        <div id="board" class="chess-board" @click="removeSelection"></div>
         <div class="controls">
           <button @click="resetBoard" class="control-button">Сбросить доску</button>
           <button @click="updateBoardState" class="update-button">Обновить доску</button>
@@ -62,6 +62,7 @@ export default {
       socket: null,
       playerColor: null,
       currentFen: '',
+      selectedSquare: null,
       capturedPieces: {
         w: [], // Срубленные белые фигуры
         b: []  // Срубленные черные фигуры
@@ -79,7 +80,7 @@ export default {
     window.jQuery = $;
 
     // Подключение к WebSocket
-    this.socket = new WebSocket('ws://localhost:8000');
+    this.socket = new WebSocket('ws://192.168.1.236:8765');
 
     this.socket.onopen = () => {
       console.log('Connected to WebSocket server');
@@ -91,69 +92,48 @@ export default {
       if (data.type === 'init_game') {
         this.playerColor = data.data.color;
         console.log(`You are playing as: ${this.playerColor === 'w' ? 'white' : 'black'}`);
-        this.initBoard(); // Инициализируем доску с правильной ориентацией
+        this.initBoard();
       }
       else if (data.type === 'update_game_state') {
         if (data.data.board_state && data.data.board_state.fen) {
-          // Обновление состояния доски
           this.currentFen = data.data.board_state.fen;
           this.game.load(this.currentFen);
           this.board.position(this.currentFen);
-
-          // Обновление срубленных фигур
           this.updateCapturedPieces();
+          this.removeSelection(); // Снимаем выделение при обновлении состояния
         }
       }
     };
 
-    // Инициализация шахматной доски
- this.board = Chessboard('board', {
-  position: 'start',
-  draggable: true,
-  pieceTheme: '/img/chesspieces/wikipedia/{piece}.png',
-   orientation: this.playerColor === 'w' ? 'white' : 'black',
-  onDragStart: this.handleDragStart,
-  onDrop: this.handleDrop,
-  onSnapEnd: this.onSnapEnd,
-  // Подключаем обработчики событий для подсветки ходов
-  onMouseoverSquare: this.handleMouseoverSquare,
-  onMouseoutSquare: this.handleMouseoutSquare
-    });
-
-    // Устанавливаем начальное значение FEN
-    this.currentFen = this.game.fen();
-
-    // Устанавливаем размер доски
-    this.$nextTick(() => {
-      const boardElement = document.getElementById('board');
-      if (boardElement) {
-        boardElement.style.width = '1200px';
-        boardElement.style.height = '1200px';
-        this.board.resize();
-      }
-    });
+    this.initBoard();
   },
   methods: {
     initBoard() {
-      // Инициализация шахматной доски с ориентацией игрока
       this.board = Chessboard('board', {
         position: 'start',
         draggable: true,
         pieceTheme: '/img/chesspieces/wikipedia/{piece}.png',
-        orientation: this.playerColor === 'w' ? 'white' : 'black', // Устанавливаем ориентацию
+        orientation: this.playerColor === 'w' ? 'white' : 'black',
         onDragStart: this.handleDragStart,
         onDrop: this.handleDrop,
-        onSnapEnd: this.handleSnapEnd,
-        // Подключаем обработчики событий для подсветки ходов
+        onSnapEnd: this.onSnapEnd,
         onMouseoverSquare: this.handleMouseoverSquare,
         onMouseoutSquare: this.handleMouseoutSquare
       });
       this.currentFen = this.game.fen();
+
+      this.$nextTick(() => {
+        const boardElement = document.getElementById('board');
+        if (boardElement) {
+          boardElement.style.width = '600px';
+          boardElement.style.height = '600px';
+          this.board.resize();
+        }
+      });
     },
-    // Обработчик начала перетаскивания фигуры
+
     handleDragStart(source, piece) {
       // Проверяем, может ли игрок двигать эту фигуру
-      // Запрещаем ходить чужими фигурами
       if ((this.playerColor === 'w' && piece.search(/^b/) !== -1) ||
           (this.playerColor === 'b' && piece.search(/^w/) !== -1)) {
         return false;
@@ -165,16 +145,28 @@ export default {
         return false;
       }
 
+      // Запоминаем выбранную клетку
+      this.selectedSquare = source;
       return true;
     },
 
-    // Обработчик завершения перетаскивания фигуры
     handleDrop(source, target) {
+      // Если фигуру отпустили на той же клетке - просто снимаем выделение
+      if (source === target) {
+        if (this.selectedSquare === source) {
+          this.removeSelection();
+        } else {
+          this.selectedSquare = source;
+          this.highlightPossibleMoves(source);
+        }
+        return;
+      }
+
       // Проверка валидности хода локально
       const move = this.game.move({
         from: source,
         to: target,
-        promotion: 'q' // Автоматическое превращение пешки в ферзя
+        promotion: 'q'
       });
 
       // Если ход невалидный, возвращаем фигуру на место
@@ -188,30 +180,27 @@ export default {
           pos_end: target
         }
       }));
+
+      // Сбрасываем выбранную клетку
+      this.selectedSquare = null;
     },
 
-    // После завершения анимации перетаскивания
     onSnapEnd() {
       this.board.position(this.game.fen());
     },
-    updateBoardState() {
-      // Обновляем состояние доски на основе текущей FEN-строки
-      this.board.position(this.currentFen);},
 
-    // Сброс доски до начального состояния
+    updateBoardState() {
+      this.board.position(this.currentFen);
+    },
+
     resetBoard() {
       this.socket.send(JSON.stringify({
         type: 'reset_board'
       }));
     },
-    getPieceImage(piece) {
-      // Формируем путь к изображению с заглавной буквой типа фигуры
-      const color = piece.charAt(0); // Цвет фигуры ('w' или 'b')
-      const type = piece.charAt(1).toUpperCase(); // Тип фигуры ('P', 'N', 'B', ...)
-      return `/img/chesspieces/wikipedia/${color}${type}.png`;
-    },
-    handleMouseoverSquare(square) {
-      // Получаем список возможных ходов для выбранной клетки
+
+    highlightPossibleMoves(square) {
+      this.removeGreySquares();
       const moves = this.game.moves({
         square: square,
         verbose: true
@@ -219,37 +208,67 @@ export default {
 
       if (moves.length === 0) return;
 
-      // Подсвечиваем выбранную клетку
       this.greySquare(square);
-
-      // Подсвечиваем клетки, куда можно пойти
       for (const move of moves) {
         this.greySquare(move.to);
       }
     },
+
+    handleMouseoverSquare(square) {
+      if (this.selectedSquare) {
+        const moves = this.game.moves({
+          square: this.selectedSquare,
+          verbose: true
+        });
+
+        for (const move of moves) {
+          if (move.to === square) {
+            this.greySquare(move.to);
+          }
+        }
+      } else {
+        const moves = this.game.moves({
+          square: square,
+          verbose: true
+        });
+
+        if (moves.length === 0) return;
+
+        this.greySquare(square);
+        for (const move of moves) {
+          this.greySquare(move.to);
+        }
+      }
+    },
+
     handleMouseoutSquare() {
-      // Убираем подсветку при выходе мыши с клетки
+      if (!this.selectedSquare) {
+        this.removeGreySquares();
+      }
+    },
+
+    removeSelection() {
+      this.selectedSquare = null;
       this.removeGreySquares();
     },
+
     greySquare(square) {
       const squareEl = document.querySelector(`.square-${square}`);
       if (squareEl) squareEl.style.backgroundColor = '#a9a9a9';
     },
+
     removeGreySquares() {
       const squares = document.querySelectorAll('.square-55d63');
       squares.forEach((el) => (el.style.backgroundColor = ''));
     },
-    // Обновление списка срубленных фигур
+
     updateCapturedPieces() {
       const pieces = this.game.board().flat().filter(Boolean);
-
-      // Изначальное количество фигур каждого типа
       const initialSetup = {
         'w': { 'p': 8, 'r': 2, 'n': 2, 'b': 2, 'q': 1, 'k': 1 },
         'b': { 'p': 8, 'r': 2, 'n': 2, 'b': 2, 'q': 1, 'k': 1 }
       };
 
-      // Подсчет текущих фигур
       const currentCount = {
         'w': { 'p': 0, 'r': 0, 'n': 0, 'b': 0, 'q': 0, 'k': 0 },
         'b': { 'p': 0, 'r': 0, 'n': 0, 'b': 0, 'q': 0, 'k': 0 }
@@ -261,18 +280,14 @@ export default {
         }
       });
 
-      // Очищаем текущие массивы срубленных фигур
       this.capturedPieces = { w: [], b: [] };
 
-      // Вычисляем срубленные фигуры
       Object.keys(initialSetup).forEach(color => {
         Object.keys(initialSetup[color]).forEach(piece => {
           const count = currentCount[color][piece];
           const diff = initialSetup[color][piece] - count;
 
-          // Добавляем срубленные фигуры
           for (let i = 0; i < diff; i++) {
-            // Если белая фигура срублена, добавляем ее в массив черных срубленных фигур и наоборот
             if (color === 'w') {
               this.capturedPieces.w.push(`w${piece}`);
             } else {
@@ -372,9 +387,10 @@ export default {
   justify-content: center;
   width: 100%;
   margin-top: 10px;
+  gap: 10px;
 }
 
-.control-button {
+.control-button, .update-button {
   padding: 10px 20px;
   background-color: #3498db;
   color: white;
@@ -384,7 +400,7 @@ export default {
   font-size: 16px;
 }
 
-.control-button:hover {
+.control-button:hover, .update-button:hover {
   background-color: #2980b9;
 }
 
