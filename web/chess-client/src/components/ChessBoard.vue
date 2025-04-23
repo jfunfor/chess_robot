@@ -80,7 +80,7 @@ export default {
     window.jQuery = $;
 
     // Подключение к WebSocket
-    this.socket = new WebSocket('ws://192.168.1.236:8765');
+    this.socket = new WebSocket('ws://192.168.1.236:8765'); // ws://192.168.1.236:8765
 
     this.socket.onopen = () => {
       console.log('Connected to WebSocket server');
@@ -296,6 +296,13 @@ export default {
           }
         });
       });
+        // Приводим имена к правильному формату (вторая буква — заглавная)
+  this.capturedPieces.w = this.capturedPieces.w.map(p =>
+    p[0] + p[1].toUpperCase()
+  );
+  this.capturedPieces.b = this.capturedPieces.b.map(p =>
+    p[0] + p[1].toUpperCase()
+  );
     }
   },
   beforeUnmount() {
@@ -365,8 +372,9 @@ export default {
 }
 
 .captured-piece img {
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
+  margin-left: -15px;
 }
 
 .board-container {
@@ -421,6 +429,7 @@ export default {
   word-break: break-all;
 }
 
+
 .player-info {
   font-size: 16px;
   padding: 10px;
@@ -436,4 +445,5 @@ export default {
   color: #e74c3c;
   font-weight: bold;
 }
+
 </style>
