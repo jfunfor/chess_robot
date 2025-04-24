@@ -10,6 +10,10 @@ export default defineConfig({
     vue(),
     vueDevTools(),
   ],
+  server: {
+     host: '0.0.0.0',
+     port: 5173, // Порт по умолчанию для Vite
+    },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
