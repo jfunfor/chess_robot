@@ -45,7 +45,7 @@ class Session:
         player = next(
             (player
              for player in self.players
-             if self.players.websocket == websocket),
+             if player.websocket == websocket),
             None
         )
         self.players[self.players.index(player)] = None

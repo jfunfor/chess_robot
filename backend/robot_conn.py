@@ -2,7 +2,7 @@ import socket
 
 
 class RobotConnector:
-    def __init__(self, host='localhost', port=12345):
+    def __init__(self, host='10.16.0.23', port=10003):
         self.host = host
         self.port = port
         self.socket = None
