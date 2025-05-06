@@ -16,13 +16,7 @@ class Player:
 
 class Session:
     def __init__(self):
-        self.id = uuid.uuid1()
-        self.active_players = 0
-        self.players = []
-        self.is_active = False
-        self.current_player = None
-        self.chess = chess
-        self.board = self.chess.Board()
+        self.reset()
 
     def add_player(self, websocket):
         if not self.active_players:
@@ -51,6 +45,14 @@ class Session:
         self.players[self.players.index(player)] = None
         self.active_players -= 1
         self.is_active = False
+
+    def reset(self):
+        self.active_players = 0
+        self.players = []
+        self.is_active = False
+        self.current_player = None
+        self.chess = chess
+        self.board = self.chess.Board()
 
     def return_board(self):
         return self.board.fen()

@@ -336,9 +336,11 @@ class WebSocketServer:
             self.session.add_player(websocket)
 
         if self.session.is_active:
-            self.redis_conn.execute("FLUSHALL")
+            self.robot_conn.connect()
+            self.redis_conn.connect()
             await self.init_game()
 
+        
         while True:
             if self.session.is_active:
                 try:
@@ -349,11 +351,26 @@ class WebSocketServer:
                         print(f"Received message from client: {message}")
                         await self.handle_message(message, websocket)
                 except websockets.ConnectionClosed:
-                    asyncio.create_task(self.async_return_board())
                     print("Client disconnected")
+                    asyncio.create_task(self.async_return_board())
                     self.session.delete_player(websocket)
-                    self.session.active_players -= 1
-                    self.session.is_active = False
+                    if self.redis_conn:
+                        self.redis_conn.execute("FLUSHALL")
+                        self.redis_conn.disconnect()
+                    if self.robot_conn:
+                        self.robot_conn.close()
+                    remaining_clients = [
+                        player.websocket 
+                        for player in self.session.players 
+                        if player is not None 
+                        and player.websocket != websocket 
+                        and player.websocket.state == websockets.protocol.State.OPEN
+                    ]
+                    for client in remaining_clients:
+                        await client.close(code=1001, reason="Partner disconnected")
+                        self.session.delete_player(client)
+                    self.session.reset()
+
                 except Exception as e:
                     await self.send_message(
                         {
@@ -364,7 +381,7 @@ class WebSocketServer:
                         },
                         websocket
                     )
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.1)
 
     async def async_return_board(self):
         loop = asyncio.get_running_loop()
@@ -375,15 +392,12 @@ class WebSocketServer:
         )
 
     async def run(self):
-        self.robot_conn.connect()
-        self.redis_conn.connect()
         async with websockets.serve(
             self.handle_client,
             "0.0.0.0",
             8765,
-            ping_interval=20,
-            ping_timeout=20
+            ping_interval=10,
+            ping_timeout=5
         ):
             print("WebSocket-сервер запущен на порту 8765")
             await asyncio.Future()
-
