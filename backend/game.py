@@ -18,7 +18,7 @@ class Session:
     def __init__(self):
         self.reset()
 
-    def add_player(self, websocket):
+    def add_player(self, websocket=None):
         if not self.active_players:
             new_client = Player(
                 websocket=websocket,
@@ -39,7 +39,8 @@ class Session:
         player = next(
             (player
              for player in self.players
-             if player.websocket == websocket),
+             if player.websocket is not None
+             and player.websocket == websocket),
             None
         )
         self.players[self.players.index(player)] = None

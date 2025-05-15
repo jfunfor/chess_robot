@@ -239,7 +239,7 @@ class WebSocketServer:
                 )
             )
              
-            await self.broadcast_success_move()
+            #await self.broadcast_success_move()
         
             color = self.session.players[
                 1 - self.session.current_player
@@ -261,9 +261,7 @@ class WebSocketServer:
             )
         )
         print(robot_response)
-        
-        await self.broadcast_success_move()
-        
+
         color = self.session.players[
                 self.session.current_player
             ].figures_color.name
@@ -274,6 +272,7 @@ class WebSocketServer:
             ].figures_color.name,
             f"{pos_start}-{pos_end}-{color}-{piece_simbol_start}-0"
         )
+        await self.broadcast_success_move()
         self.session.current_player = 1 - self.session.current_player
 
     async def handle_board_state(self, websocket):
@@ -352,7 +351,8 @@ class WebSocketServer:
                         await self.handle_message(message, websocket)
                 except websockets.ConnectionClosed:
                     print("Client disconnected")
-                    asyncio.create_task(self.async_return_board())
+                    return_board_to_original(self.robot_conn)
+                    #asyncio.create_task(self.async_return_board())
                     self.session.delete_player(websocket)
                     if self.redis_conn:
                         self.redis_conn.execute("FLUSHALL")
