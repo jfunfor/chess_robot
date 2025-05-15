@@ -1,50 +1,67 @@
 <template>
   <div class="chess-container">
-    <!-- Шапка с информацией о текущем ходе -->
-    <div class="header">
-      <h1>Шахматная игра</h1>
-      <div class="current-turn">
-        <div class="turn-indicator" :class="game.turn() === 'w' ? 'white-turn' : 'black-turn'"></div>
-        <span>{{ game.turn() === 'w' ? 'Ход белых' : 'Ход черных' }}</span>
-      </div>
+    <!-- Экран ожидания второго игрока -->
+    <div v-if="gameStatus === 'waiting'" class="waiting-screen">
+      <h1>Ожидание второго игрока...</h1>
+      <div class="spinner"></div>
+      <p>Как только подключится второй игрок, игра начнется автоматически</p>
     </div>
 
-    <div class="game-area">
-      <!-- Левая панель: срубленные черные фигуры -->
-      <div class="captured-pieces black-captured">
-        <h3>Срубленные черные фигуры:</h3>
-        <div v-for="(piece, index) in capturedPieces.b" :key="'b'+index" class="captured-piece">
-          <img :src="`/img/chesspieces/wikipedia/${piece}.png`" :alt="piece" />
+    <!-- Основной экран игры -->
+    <div v-else-if="gameStatus === 'playing'">
+      <!-- Шапка с информацией о текущем ходе -->
+      <div class="header">
+        <h1>Шахматная игра</h1>
+        <div class="current-turn">
+          <div class="turn-indicator" :class="game.turn() === 'w' ? 'white-turn' : 'black-turn'"></div>
+          <span>{{ game.turn() === 'w' ? 'Ход белых' : 'Ход черных' }}</span>
         </div>
       </div>
 
-      <!-- Центральная часть: шахматная доска -->
-      <div class="board-container">
-        <div id="board" class="chess-board" @click="removeSelection"></div>
-        <div class="controls">
-          <button @click="resetBoard" class="control-button">Сбросить доску</button>
-          <button @click="updateBoardState" class="update-button">Обновить доску</button>
-          <div class="player-info">
-            Вы играете: <span :class="playerColor === 'w' ? 'white-color' : 'black-color'">
-              {{ playerColor === 'w' ? 'белыми' : 'черными' }}
-            </span>
+      <div class="game-area">
+        <!-- Левая панель: срубленные черные фигуры -->
+        <div class="captured-pieces black-captured">
+          <h3>Срубленные черные фигуры:</h3>
+          <div v-for="(piece, index) in capturedPieces.b" :key="'b'+index" class="captured-piece">
+            <img :src="`/img/chesspieces/wikipedia/${piece}.png`" :alt="piece" />
+          </div>
+        </div>
+
+        <!-- Центральная часть: шахматная доска -->
+        <div class="board-container">
+          <div id="board" class="chess-board" @click="removeSelection"></div>
+          <div class="controls">
+            <button @click="resetBoard" class="control-button">Сбросить доску</button>
+            <button @click="updateBoardState" class="update-button">Обновить доску</button>
+            <div class="player-info">
+              Вы играете: <span :class="playerColor === 'w' ? 'white-color' : 'black-color'">
+                {{ playerColor === 'w' ? 'белыми' : 'черными' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Правая панель: срубленные белые фигуры -->
+        <div class="captured-pieces white-captured">
+          <h3>Срубленные белые фигуры:</h3>
+          <div v-for="(piece, index) in capturedPieces.w" :key="'w'+index" class="captured-piece">
+            <img :src="`/img/chesspieces/wikipedia/${piece}.png`" :alt="piece" />
           </div>
         </div>
       </div>
 
-      <!-- Правая панель: срубленные белые фигуры -->
-      <div class="captured-pieces white-captured">
-        <h3>Срубленные белые фигуры:</h3>
-        <div v-for="(piece, index) in capturedPieces.w" :key="'w'+index" class="captured-piece">
-          <img :src="`/img/chesspieces/wikipedia/${piece}.png`" :alt="piece" />
-        </div>
+      <!-- Нижняя панель: FEN-нотация -->
+      <div class="fen-panel">
+        <h3>FEN-нотация:</h3>
+        <div class="fen-value">{{ currentFen }}</div>
       </div>
     </div>
 
-    <!-- Нижняя панель: FEN-нотация -->
-    <div class="fen-panel">
-      <h3>FEN-нотация:</h3>
-      <div class="fen-value">{{ currentFen }}</div>
+    <!-- Экран результата игры -->
+    <div v-else-if="gameStatus === 'game_over'" class="result-screen">
+      <h1>{{ gameResultText }}</h1>
+      <div class="result-icon" :class="gameResultClass"></div>
+      <button @click="resetBoard" class="control-button">Играть снова</button>
     </div>
   </div>
 </template>
@@ -66,12 +83,26 @@ export default {
       capturedPieces: {
         w: [], // Срубленные белые фигуры
         b: []  // Срубленные черные фигуры
-      }
+      },
+      gameStatus: 'waiting', // 'waiting', 'playing', 'game_over'
+      gameResult: null // 'win', 'lose', 'draw'
     };
   },
   computed: {
     currentTurnText() {
       return this.game.turn() === 'w' ? 'Ход белых' : 'Ход черных';
+    },
+    gameResultText() {
+      if (this.gameResult === 'win') return 'Победа!';
+      if (this.gameResult === 'lose') return 'Поражение';
+      if (this.gameResult === 'draw') return 'Ничья';
+      return 'Игра завершена';
+    },
+    gameResultClass() {
+      if (this.gameResult === 'win') return 'win-icon';
+      if (this.gameResult === 'lose') return 'lose-icon';
+      if (this.gameResult === 'draw') return 'draw-icon';
+      return '';
     }
   },
   mounted() {
@@ -80,35 +111,69 @@ export default {
     window.jQuery = $;
 
     // Подключение к WebSocket
-    this.socket = new WebSocket('ws://192.168.1.236:8765'); // ws://192.168.1.236:8765
-
-    this.socket.onopen = () => {
-      console.log('Connected to WebSocket server');
-    };
-
-    this.socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      if (data.type === 'init_game') {
-        this.playerColor = data.data.color;
-        console.log(`You are playing as: ${this.playerColor === 'w' ? 'white' : 'black'}`);
-        this.initBoard();
-      }
-      else if (data.type === 'update_game_state') {
-        if (data.data.board_state && data.data.board_state.fen) {
-          this.currentFen = data.data.board_state.fen;
-          this.game.load(this.currentFen);
-          this.board.position(this.currentFen);
-          this.updateCapturedPieces();
-          this.removeSelection(); // Снимаем выделение при обновлении состояния
-        }
-      }
-    };
-
-    this.initBoard();
+    this.connectWebSocket();
   },
   methods: {
+    connectWebSocket() {
+      this.socket = new WebSocket('ws://192.168.1.191:8765');
+
+      this.socket.onopen = () => {
+        console.log('Connected to WebSocket server');
+      };
+
+      this.socket.onmessage = (event) => {
+        console.log('Received message:', event.data);
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'init_game') {
+          this.playerColor = data.data.color;
+          console.log(`You are playing as: ${this.playerColor === 'w' ? 'white' : 'black'}`);
+          this.gameStatus = 'playing';
+          this.$nextTick(() => {
+            this.initBoard();
+          });
+        }
+        else if (data.type === 'update_game_state') {
+          if (data.data.board_state && data.data.board_state.fen) {
+            this.currentFen = data.data.board_state.fen;
+            this.game.load(this.currentFen);
+
+            if (this.game.isGameOver()) {
+              this.handleGameOver();
+            } else {
+              if (this.board) {
+                this.board.position(this.currentFen);
+              }
+              this.updateCapturedPieces();
+              this.removeSelection();
+            }
+          }
+        }
+        else if (data.type === 'game_over') {
+          this.handleGameOver(data.data.result);
+        }
+      };
+
+      this.socket.onclose = () => {
+        console.log('Disconnected from WebSocket server');
+        // Попытка переподключения через 5 секунд
+        setTimeout(() => {
+          this.connectWebSocket();
+        }, 5000);
+      };
+
+      this.socket.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+    },
+
     initBoard() {
+      // Проверяем, существует ли элемент board в DOM
+      if (!document.getElementById('board')) {
+        console.error('Board element not found in DOM');
+        return;
+      }
+
       this.board = Chessboard('board', {
         position: 'start',
         draggable: true,
@@ -120,19 +185,46 @@ export default {
         onMouseoverSquare: this.handleMouseoverSquare,
         onMouseoutSquare: this.handleMouseoutSquare
       });
-      this.currentFen = this.game.fen();
 
+      this.currentFen = this.game.fen();
+      this.board.position(this.currentFen);
+
+      // Устанавливаем размеры доски после инициализации
       this.$nextTick(() => {
         const boardElement = document.getElementById('board');
         if (boardElement) {
           boardElement.style.width = '600px';
           boardElement.style.height = '600px';
-          this.board.resize();
+          if (this.board) {
+            this.board.resize();
+          }
         }
       });
     },
 
+    handleGameOver(result = null) {
+      if (!result) {
+        // Определяем результат на основе текущего состояния игры
+        if (this.game.isCheckmate()) {
+          this.gameResult = this.game.turn() !== this.playerColor ? 'win' : 'lose';
+        } else if (this.game.isDraw()) {
+          this.gameResult = 'draw';
+        }
+      } else {
+        // Используем результат, присланный сервером
+        this.gameResult = result;
+      }
+
+      this.gameStatus = 'game_over';
+      if (this.board) {
+        this.board.position(this.currentFen);
+      }
+      this.updateCapturedPieces();
+    },
+
     handleDragStart(source, piece) {
+      if (this.gameStatus !== 'playing') return false;
+
       // Проверяем, может ли игрок двигать эту фигуру
       if ((this.playerColor === 'w' && piece.search(/^b/) !== -1) ||
           (this.playerColor === 'b' && piece.search(/^w/) !== -1)) {
@@ -186,14 +278,28 @@ export default {
     },
 
     onSnapEnd() {
-      this.board.position(this.game.fen());
+      if (this.board) {
+        this.board.position(this.game.fen());
+      }
     },
 
     updateBoardState() {
-      this.board.position(this.currentFen);
+      if (this.board) {
+        this.board.position(this.currentFen);
+      }
     },
 
     resetBoard() {
+      this.gameStatus = 'waiting';
+      this.gameResult = null;
+      this.game = new Chess();
+      this.capturedPieces = { w: [], b: [] };
+      this.currentFen = this.game.fen();
+
+      if (this.board) {
+        this.board.position('start');
+      }
+
       this.socket.send(JSON.stringify({
         type: 'reset_board'
       }));
@@ -296,13 +402,13 @@ export default {
           }
         });
       });
-        // Приводим имена к правильному формату (вторая буква — заглавная)
-  this.capturedPieces.w = this.capturedPieces.w.map(p =>
-    p[0] + p[1].toUpperCase()
-  );
-  this.capturedPieces.b = this.capturedPieces.b.map(p =>
-    p[0] + p[1].toUpperCase()
-  );
+
+      this.capturedPieces.w = this.capturedPieces.w.map(p =>
+        p[0] + p[1].toUpperCase()
+      );
+      this.capturedPieces.b = this.capturedPieces.b.map(p =>
+        p[0] + p[1].toUpperCase()
+      );
     }
   },
   beforeUnmount() {
@@ -314,11 +420,64 @@ export default {
 </script>
 
 <style scoped>
+/* Все стили остаются без изменений */
 .chess-container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
   font-family: Arial, sans-serif;
+}
+
+.waiting-screen {
+  text-align: center;
+  padding: 50px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  margin-top: 50px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.result-screen {
+  text-align: center;
+  padding: 50px;
+  background-color: #f9f9f9;
+  border-radius: 10px;
+  margin-top: 50px;
+}
+
+.result-icon {
+  width: 100px;
+  height: 100px;
+  margin: 20px auto;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.win-icon {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%232ecc71"><path d="M12 2L4 12l8 10 8-10z"/><path d="M7 12l5 5 5-5"/></svg>');
+}
+
+.lose-icon {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23e74c3c"><path d="M12 2L2 22h20L12 2z"/><path d="M12 16h0m-4-4h8"/></svg>');
+}
+
+.draw-icon {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23f39c12"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 18a8 8 0 110-16 8 8 0 010 16z"/><path d="M8 12h8"/></svg>');
 }
 
 .header {
@@ -429,7 +588,6 @@ export default {
   word-break: break-all;
 }
 
-
 .player-info {
   font-size: 16px;
   padding: 10px;
@@ -445,5 +603,4 @@ export default {
   color: #e74c3c;
   font-weight: bold;
 }
-
 </style>
