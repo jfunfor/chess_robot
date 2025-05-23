@@ -21,7 +21,6 @@
       <div class="game-area">
         <!-- Левая панель: срубленные черные фигуры -->
         <div class="captured-pieces black-captured">
-          <h3>Срубленные черные фигуры:</h3>
           <div v-for="(piece, index) in capturedPieces.b" :key="'b'+index" class="captured-piece">
             <img :src="`/img/chesspieces/wikipedia/${piece}.png`" :alt="piece" />
           </div>
@@ -31,7 +30,6 @@
         <div class="board-container">
           <div id="board" class="chess-board" @click="removeSelection"></div>
           <div class="controls">
-            <button @click="resetBoard" class="control-button">Сбросить доску</button>
             <button @click="updateBoardState" class="update-button">Обновить доску</button>
             <div class="player-info">
               Вы играете: <span :class="playerColor === 'w' ? 'white-color' : 'black-color'">
@@ -43,7 +41,6 @@
 
         <!-- Правая панель: срубленные белые фигуры -->
         <div class="captured-pieces white-captured">
-          <h3>Срубленные белые фигуры:</h3>
           <div v-for="(piece, index) in capturedPieces.w" :key="'w'+index" class="captured-piece">
             <img :src="`/img/chesspieces/wikipedia/${piece}.png`" :alt="piece" />
           </div>
@@ -61,7 +58,6 @@
     <div v-else-if="gameStatus === 'game_over'" class="result-screen">
       <h1>{{ gameResultText }}</h1>
       <div class="result-icon" :class="gameResultClass"></div>
-      <button @click="resetBoard" class="control-button">Играть снова</button>
     </div>
   </div>
 </template>
