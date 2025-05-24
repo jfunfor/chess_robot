@@ -9,6 +9,7 @@ class ChessField extends StatelessWidget {
   final Function()? onTap;
   final bool isSelected;
   final bool isValidMove;
+  final bool isEnabled;
 
   const ChessField({
     Key? key,
@@ -17,6 +18,7 @@ class ChessField extends StatelessWidget {
     required this.onTap,
     this.isSelected = false,
     this.isValidMove = false,
+    this.isEnabled = false,
   }) : super(key: key);
 
   @override
@@ -56,6 +58,25 @@ class ChessField extends StatelessWidget {
                         piece!.icon,
                         color:
                             piece!.isWhite ? AppColors.white : AppColors.black,
+                        errorBuilder: (context, error, stackTrace) {
+                          print(
+                              'Error loading chess piece: ${piece!.icon} - $error');
+                          // 使用简单的占位符而不是Unicode字符
+                          return Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: piece!.isWhite
+                                  ? Colors.white.withOpacity(0.7)
+                                  : Colors.black.withOpacity(0.7),
+                              border: Border.all(
+                                color: piece!.isWhite
+                                    ? Colors.black
+                                    : Colors.white,
+                                width: 1.5,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   )
