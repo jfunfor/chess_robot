@@ -111,7 +111,7 @@ export default {
   },
   methods: {
     connectWebSocket() {
-      this.socket = new WebSocket('ws://192.168.1.191:8765');
+      this.socket = new WebSocket('ws://10.160.160.148:8765');
 
       this.socket.onopen = () => {
         console.log('Connected to WebSocket server');
