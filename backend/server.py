@@ -34,12 +34,12 @@ def return_piece(square,board: chess.Board,robot,piece_positions): #возвра
 
     current_square = square[0]
     figure = square[1]
-    Board = 1
+    Board = 2
 
     if square[0][0:7] == "Board_2":#проверка на то что клетка со 2 доски
         current_square = None
         square_board_2 = square[0][7:len(square[0])]
-        Board = 2
+        Board = 1
 
     flag = False
 
@@ -68,7 +68,7 @@ def return_piece(square,board: chess.Board,robot,piece_positions): #возвра
             #если там никого нет, ставим
             if piece == None:
                 if current_square != None:#если клетка не находиться на 2 доске
-                    board.remove_piece_at(change_format_cell(current_square)-1) #удаляем фигуру в логике в доске 1
+                    board.remove_piece_at(change_format_cell(current_square)-1) #удаляем фигуру в логике в доске 2
                 else:
                     current_square = square_board_2
 
@@ -79,13 +79,12 @@ def return_piece(square,board: chess.Board,robot,piece_positions): #возвра
                 robot_request(
                     Board,
                     change_format_cell(current_square),
-                    1,
+                    2,
                     change_format_cell(square)
                     )
                 )
 
-                if robot_response != "Done":
-                    raise Exception("The robot failed to make remove figure")
+                
 
                 flag = True
 
@@ -137,13 +136,13 @@ def return_piece_from_2_to_1(board: chess.Board,robot,piece_positions,dataBase):
         square = [f"Board_2{piece[3:5]}",piece[len(piece)-3]]
         return_piece(square,board,robot,piece_positions)
 
-def return_board_to_original(): #возврат доски в исходное состояние
+def return_board_to_original(robot): #возврат доски в исходное состояние
     redis = RedisConnector()# подкл к БД
     redis.connect()
     dataBase = redis.client
 
-    robot = RobotConnector()# подкл к роботу
-    robot.connect()
+    #robot = RobotConnector()# подкл к роботу
+    #robot.connect()
 
     itemsWhite = list(reversed(list(map(decode_redis,dataBase.lrange("WHITE",0,-1)))))
     itemsBlack = list(reversed(list(map(decode_redis,dataBase.lrange("BLACK",0,-1)))))
@@ -174,8 +173,6 @@ def return_board_to_original(): #возврат доски в исходное �
     return_all_pieces_on_them_places(board,robot,piece_positions)
 
     return_piece_from_2_to_1(board,robot,piece_positions,dataBase)
-
-
 
 
 class WebSocketServer:
@@ -233,19 +230,16 @@ class WebSocketServer:
         if cell_occupied: 
             global pos_board_2 
             pos_board_2 = pos_board_2+1
-            robot_response = self.robot_conn.send_and_receive( #убираем фигуру на 2 поле
+            robot_response = self.robot_conn.send_and_receive( #убираем фигуру на 1 доску
                 robot_request(
-                    1,
-                    change_format_cell(pos_end),
                     2,
+                    change_format_cell(pos_end),
+                    1,
                     pos_board_2
                 )
             )
              
-            if robot_response == 'Done': #ответ робота на перенос фигуры
-                await self.broadcast_success_move()
-            else:
-                raise Exception("The robot failed to make remove figure")
+            #await self.broadcast_success_move()
         
             color = self.session.players[
                 1 - self.session.current_player
@@ -260,16 +254,13 @@ class WebSocketServer:
         
         robot_response = self.robot_conn.send_and_receive(
             robot_request(
-                1,
+                2,
                 change_format_cell(pos_start),
-                1,
+                2,
                 change_format_cell(pos_end)
             )
         )
-        if robot_response == 'Done':
-            await self.broadcast_success_move()
-        else:
-            raise Exception("The robot failed to make a move")
+        print(robot_response)
 
         color = self.session.players[
                 self.session.current_player
@@ -281,6 +272,7 @@ class WebSocketServer:
             ].figures_color.name,
             f"{pos_start}-{pos_end}-{color}-{piece_simbol_start}-0"
         )
+        await self.broadcast_success_move()
         self.session.current_player = 1 - self.session.current_player
 
     async def handle_board_state(self, websocket):
@@ -343,8 +335,11 @@ class WebSocketServer:
             self.session.add_player(websocket)
 
         if self.session.is_active:
+            self.robot_conn.connect()
+            self.redis_conn.connect()
             await self.init_game()
 
+        
         while True:
             if self.session.is_active:
                 try:
@@ -356,8 +351,26 @@ class WebSocketServer:
                         await self.handle_message(message, websocket)
                 except websockets.ConnectionClosed:
                     print("Client disconnected")
+                    return_board_to_original(self.robot_conn)
+                    #asyncio.create_task(self.async_return_board())
                     self.session.delete_player(websocket)
-                    self.session.is_active = False
+                    if self.redis_conn:
+                        self.redis_conn.execute("FLUSHALL")
+                        self.redis_conn.disconnect()
+                    if self.robot_conn:
+                        self.robot_conn.close()
+                    remaining_clients = [
+                        player.websocket 
+                        for player in self.session.players 
+                        if player is not None 
+                        and player.websocket != websocket 
+                        and player.websocket.state == websockets.protocol.State.OPEN
+                    ]
+                    for client in remaining_clients:
+                        await client.close(code=1001, reason="Partner disconnected")
+                        self.session.delete_player(client)
+                    self.session.reset()
+
                 except Exception as e:
                     await self.send_message(
                         {
@@ -368,11 +381,23 @@ class WebSocketServer:
                         },
                         websocket
                     )
-            await asyncio.sleep(0)
+            await asyncio.sleep(0.1)
+
+    async def async_return_board(self):
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(
+            None, 
+            return_board_to_original, 
+            self.robot_conn
+        )
 
     async def run(self):
-        self.robot_conn.connect()
-        self.redis_conn.connect()
-        async with websockets.serve(self.handle_client, "localhost", 8765):
+        async with websockets.serve(
+            self.handle_client,
+            "0.0.0.0",
+            8765,
+            ping_interval=10,
+            ping_timeout=5
+        ):
             print("WebSocket-сервер запущен на порту 8765")
             await asyncio.Future()
