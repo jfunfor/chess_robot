@@ -11,6 +11,7 @@ class RobotConnector:
         self.socket = None
 
     def connect(self):
+        """Устанавливает TCP-соединение с роботом."""
         try:
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((self.host, self.port))
@@ -20,6 +21,15 @@ class RobotConnector:
             exit(1)
 
     def send_and_receive(self, message):
+        """
+        Отправляет команду роботу и получает ответ.
+        
+        Параметры:
+            message (str): команда для отправки
+        
+        Возвращает:
+            str | None: ответ робота или None при ошибке
+        """
         try:
             self.socket.sendall(message.encode())
             response = self.socket.recv(1024).decode()
@@ -29,6 +39,7 @@ class RobotConnector:
             return None
 
     def close(self):
+        """Закрывает соединение с роботом."""
         if self.socket:
             self.socket.close()
             print("Connection to robot closed")

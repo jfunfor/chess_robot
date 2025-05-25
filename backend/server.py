@@ -16,6 +16,18 @@ LETTERS = "abcdefgh"
 pos_board_2 = 0
 
 def change_format_cell(cell):
+    """
+    Конвертирует шахматные координаты в числовой индекс.
+    
+    Пример:
+        "e4" → 28
+    
+    Параметры:
+        cell (str): координаты клетки (например, "e4")
+    
+    Возвращает:
+        int: числовой индекс (1-64)
+    """
     return int(cell[1]) * 8 - (8 - (int(LETTERS.index(cell[0])) + 1))
 
 def change_format_cell_original(pos):
@@ -136,7 +148,13 @@ def return_piece_from_2_to_1(board: chess.Board,robot,piece_positions,dataBase):
         square = [f"Board_2{piece[3:5]}",piece[len(piece)-3]]
         return_piece(square,board,robot,piece_positions)
 
-def return_board_to_original(robot): #возврат доски в исходное состояние
+def return_board_to_original(robot):
+    """
+    Восстанавливает исходное состояние доски используя данные из Redis.
+    
+    Параметры:
+        robot (RobotConnector): подключение к роботу
+    """
     redis = RedisConnector()# подкл к БД
     redis.connect()
     dataBase = redis.client
@@ -185,10 +203,23 @@ class WebSocketServer:
         await websocket.send(json.dumps(message))
 
     async def broadcast(self, message):
+        """
+        Рассылает сообщение всем подключенным клиентам.
+        
+        Параметры:
+            message (dict): сообщение для рассылки
+        """
         for connection in self.session.players:
             await self.send_message(message, connection.websocket)
 
     async def handle_message(self, message, websocket):
+        """
+        Обрабатывает входящие сообщения от клиента.
+        
+        Параметры:
+            message (dict): декодированное JSON-сообщение
+            websocket (WebSocket): соединение-источник
+        """
         action = message.get('type')
         if action is None:
             raise Exception("The required field action is missing")
@@ -328,6 +359,12 @@ class WebSocketServer:
                 )
 
     async def handle_client(self, websocket):
+        """
+        Обрабатывает подключение клиента.
+        
+        Параметры:
+            websocket (WebSocket): соединение с клиентом
+        """
         if self.session.active_players >= 2:
             await websocket.send(json.dumps({"message": "session is full"}))
             return
