@@ -1,10 +1,13 @@
 import redis
+import os
 
+from dotenv import load_dotenv
+load_dotenv()
 
 class RedisConnector:
-    def __init__(self, host='10.160.160.148', port=6379, db=0):
-        self.host = host
-        self.port = port
+    def __init__(self, db=0):
+        self.host = os.getenv("REDIS_HOST", "localhost")
+        self.port = int(os.getenv("REDIS_PORT", 6379))
         self.db = db
         self.client = None
 

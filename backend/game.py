@@ -39,7 +39,7 @@ class Session:
         player = next(
             (player
              for player in self.players
-             if player.websocket is not None
+             if player is not None
              and player.websocket == websocket),
             None
         )

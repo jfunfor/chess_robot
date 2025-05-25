@@ -1,10 +1,13 @@
 import socket
+import os
 
+from dotenv import load_dotenv
+load_dotenv()
 
 class RobotConnector:
-    def __init__(self, host='10.16.0.23', port=10003):
-        self.host = host
-        self.port = port
+    def __init__(self):
+        self.host = os.getenv("ROBOT_HOST", "localhost")
+        self.port = int(os.getenv("ROBOT_PORT", 12345))
         self.socket = None
 
     def connect(self):
