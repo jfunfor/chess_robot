@@ -18,7 +18,6 @@ class RobotConnector:
             print(f"Connected to robot at {self.host}:{self.port}")
         except ConnectionRefusedError:
             print(f"Connection to robot at {self.host}:{self.port} refused.")
-            exit(1)
 
     def send_and_receive(self, message):
         """
