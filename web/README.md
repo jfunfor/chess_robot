@@ -37,7 +37,8 @@
 ```
 web/
 ├── chess-client/ # Клиентская часть        
-├── public/ # Статические файлы        
+├── public/ # Статические файлы
+│ │ └── index.html # Основной HTML-файл      
 ├── src/                 
 │ ├── assets/ # Ресурсы (изображения, стили)                  
 │ ├── components/ # Компоненты Vue                 
@@ -45,8 +46,7 @@ web/
 │ │ └── ChessBoard.vue # Шахматная доска              
 │ ├── App.vue # Корневой компонент          
 │ └── main.js # Точка входа            
-├── package.json # Зависимости и скрипты
-├── index.html # Основной HTML-файл    
+├── package.json # Зависимости и скрипты 
 └── vite.config.js # Конфиг Vite
 ```
 
