@@ -1,10 +1,13 @@
 import 'package:chess316/feature/chessboard/data/service/chess_robot_service.dart';
+import 'package:chess316/feature/chessboard/data/service/chess_websocket_service.dart';
+import 'package:chess316/feature/chessboard/domain/FEN/fen_utils.dart';
 import 'package:chess316/feature/chessboard/domain/board_resetter.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_piece_enum.dart';
 import 'package:chess316/feature/chessboard/domain/models/chess_pieces.dart';
 import 'package:flutter/cupertino.dart';
 
 class ChessBoardViewModel extends ChangeNotifier {
+  // Board state
   List<List<ChessPiece?>> _chessBoard = [];
   List<bool> _selectedPieces = [];
   List<bool> _validMoves = [];
@@ -18,39 +21,43 @@ class ChessBoardViewModel extends ChangeNotifier {
   bool _checkMate = false;
   bool _isFieldEnabled = true;
 
+  // Robot service
   final ChessRobotService _service = ChessRobotService();
   int _killedPiecesCount = 1;
 
+  // Messages
   String _alertMessage = '';
-
   String _connectionErrorMessage = '';
 
+  // WebSocket related properties
+  final ChessWebSocketService _webSocketService = ChessWebSocketService();
+  String _webSocketStatus = '';
+  bool _webSocketError = false;
+  bool _isWebSocketConnected = false;
+  String? _playerColor; // 'w' or 'b'
+
+  // Getters
   int get selectedFieldIndex => _selectedFieldIndex;
-
   int get selectedFieldRow => _selectedFieldRow;
-
   int get selectedFieldColumn => _selectedFieldColumn;
-
   List<bool> get selectedPieces => _selectedPieces;
-
   List<List<ChessPiece?>> get chessBoard => _chessBoard;
-
   List<bool> get validMoves => _validMoves;
-
   bool get check => _check;
-
   bool get checkMate => _checkMate;
-
   bool get isWhiteTurn => _isWhiteTurn;
-
   bool get isFieldEnabled => _isFieldEnabled;
-
   String get alertMessage => _alertMessage;
-
   String get connectionErrorMessage => _connectionErrorMessage;
+
+  // WebSocket getters
+  String get webSocketStatus => _webSocketStatus;
+  bool get webSocketError => _webSocketError;
+  bool get isWebSocketConnected => _isWebSocketConnected;
 
   ChessBoardViewModel() {
     initChessBoard();
+    _setupWebSocketListeners();
   }
 
   /// Initialization of the chessboard, default placement of pieces
@@ -114,13 +121,72 @@ class ChessBoardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  ///Set a selected piece
-  ///If user taps on already selected piece - it unselects
-  ///If user selects piece it calls [simulateFutureMove] to calculate valid moves for a given piece
-  ///If user taps on valid field after selecting the piece it calls the [movePiece] method
+  /// Set a selected piece
+  /// If user taps on already selected piece - it unselects
+  /// If user selects piece it calls [simulateFutureMove] to calculate valid moves for a given piece
+  /// If user taps on valid field after selecting the piece it calls the [movePiece] method
   void selectPiece(int index) {
     final row = index ~/ 8;
     final column = index % 8;
+
+    // If WebSocket is connected, use WebSocket logic for moves
+    if (_isWebSocketConnected) {
+      if (_selectedPieces[index]) {
+        setSelectedToDefault();
+        clear();
+      } else {
+        if (_validMoves[index] == true && _selectedFieldIndex != -1) {
+          // Get algebraic notation positions
+          final selectedRow = _selectedFieldIndex ~/ 8;
+          final selectedCol = _selectedFieldIndex % 8;
+          final fromPos =
+              FenUtils.positionToAlgebraic(selectedRow, selectedCol);
+          final toPos = FenUtils.positionToAlgebraic(row, column);
+
+          // Send move through WebSocket
+          _webSocketService.makeMove(fromPos, toPos);
+          _webSocketStatus = 'Sending move request...';
+          _isFieldEnabled = false;
+
+          // Clear selections
+          setSelectedToDefault();
+          clear();
+          notifyListeners();
+          return;
+        } else {
+          // Check if player can select this piece (color matches turn)
+          bool canSelect = _chessBoard[row][column] != null;
+          if (_playerColor != null) {
+            canSelect = canSelect &&
+                ((_playerColor == 'w' && _chessBoard[row][column]!.isWhite) ||
+                    (_playerColor == 'b' &&
+                        !_chessBoard[row][column]!.isWhite));
+          } else {
+            canSelect =
+                canSelect && _chessBoard[row][column]!.isWhite == _isWhiteTurn;
+          }
+
+          if (canSelect) {
+            clear();
+            _selectedFieldIndex = index;
+            _selectedFieldRow = row;
+            _selectedFieldColumn = column;
+            _selectedPieces[index] = true;
+
+            final List<List<int>> moves = simulateFutureMove(
+                _selectedFieldRow, _selectedFieldColumn, true);
+
+            for (var move in moves) {
+              _validMoves[move[0] * 8 + move[1]] = true;
+            }
+          }
+        }
+      }
+      notifyListeners();
+      return;
+    }
+
+    // Local game logic (original implementation)
     if (_selectedPieces[index]) {
       setSelectedToDefault();
       clear();
@@ -151,8 +217,8 @@ class ChessBoardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  ///Moves the piece to a given [row] and [column] on the screen
-  ///Calls [movePieceWithRobot] method to move a piece on a real chess board with Robot
+  /// Moves the piece to a given [row] and [column] on the screen
+  /// Calls [movePieceWithRobot] method to move a piece on a real chess board with Robot
   void movePiece(int row, int column) async {
     if (_chessBoard[_selectedFieldRow][_selectedFieldColumn]!.type ==
         ChessPieceType.king) {
@@ -169,17 +235,12 @@ class ChessBoardViewModel extends ChangeNotifier {
     final robotSelectedFieldColumn = _selectedFieldColumn;
     final robotPiece = _chessBoard[row][column];
 
-    // await movePieceWithRobot(
-    //     robotRow, robotColumn, robotSelectedFieldRow, robotSelectedFieldColumn, piece);
-
     _chessBoard[row][column] =
         _chessBoard[_selectedFieldRow][_selectedFieldColumn];
 
     _chessBoard[_selectedFieldRow][_selectedFieldColumn] = null;
     _isFieldEnabled = false;
     notifyListeners();
-
-
 
     if (isCheck(!_isWhiteTurn)) {
       _check = true;
@@ -194,8 +255,8 @@ class ChessBoardViewModel extends ChangeNotifier {
       _checkMate = true;
     }
 
-    await movePieceWithRobot(
-        robotRow, robotColumn, robotSelectedFieldRow, robotSelectedFieldColumn, robotPiece);
+    await movePieceWithRobot(robotRow, robotColumn, robotSelectedFieldRow,
+        robotSelectedFieldColumn, robotPiece);
 
     _isWhiteTurn = !_isWhiteTurn;
     _isFieldEnabled = true;
@@ -203,8 +264,8 @@ class ChessBoardViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  ///Checks for check condition
-  ///Returns true if there is a check, otherwise returns false
+  /// Checks for check condition
+  /// Returns true if there is a check, otherwise returns false
   bool isCheck(bool isWhiteKing) {
     List<int> kingPosition =
         isWhiteKing ? _whiteKingPosition : _blackKingPosition;
@@ -247,9 +308,9 @@ class ChessBoardViewModel extends ChangeNotifier {
     return true;
   }
 
-  ///Simulates possible moves for a given piece at a specified position
-  ///Returns a list of valid (safe) moves [realValidMoves] that the piece can make
-  ///Is used for subsequent use in the logic of moving a piece or checking checkmate conditions.
+  /// Simulates possible moves for a given piece at a specified position
+  /// Returns a list of valid (safe) moves [realValidMoves] that the piece can make
+  /// Is used for subsequent use in the logic of moving a piece or checking checkmate conditions.
   List<List<int>> simulateFutureMove(int row, int col, bool checkSimulation) {
     List<List<int>> realValidMoves = [];
     final ChessPiece? piece = _chessBoard[row][col];
@@ -273,8 +334,8 @@ class ChessBoardViewModel extends ChangeNotifier {
     return realValidMoves;
   }
 
-  ///Checks the simulated move to see if it will lead to a check or not
-  ///Return true if the move is safe, otherwise returns false
+  /// Checks the simulated move to see if it will lead to a check or not
+  /// Return true if the move is safe, otherwise returns false
   bool futureMoveIsSafe(
       int startRow, int startCol, int endRow, int endCol, ChessPiece piece) {
     ChessPiece? originalDestinationPiece = _chessBoard[endRow][endCol];
@@ -308,37 +369,37 @@ class ChessBoardViewModel extends ChangeNotifier {
     return moveIsSafe;
   }
 
-  ///Move chess piece with Robot
-  ///Moves killed piece to the second chess board. Then moves the killer
-  ///Will throw an exception if there is no connection to Robot with TCP/IP
-  Future<void> movePieceWithRobot(
-      int row, int column, int selectedRow, int selectedColumn, ChessPiece? piece) async {
+  /// Move chess piece with Robot
+  /// Moves killed piece to the second chess board. Then moves the killer
+  /// Will throw an exception if there is no connection to Robot with TCP/IP
+  Future<void> movePieceWithRobot(int row, int column, int selectedRow,
+      int selectedColumn, ChessPiece? piece) async {
     try {
       _service.checkConnection();
       final int positionFrom = positionFromMatrix(selectedRow, selectedColumn);
       final int positionTo = positionFromMatrix(row, column);
       if (piece != null) {
-        //move killed piece from the board
+        // Move killed piece from the board
         await _service.moveChessPiece(2, positionTo, 1, _killedPiecesCount);
-        // add this move into reSetter
+        // Add this move into reSetter
         BoardReSetter.addMove(
             boardFrom: 2,
             boardTo: 1,
             positionTo: _killedPiecesCount,
             positionFrom: positionTo);
-        //after killed piece removed - move the killer
+        // After killed piece removed - move the killer
         await _service.moveChessPiece(2, positionFrom, 2, positionTo);
-        // add this move into reSetter
+        // Add this move into reSetter
         BoardReSetter.addMove(
             boardFrom: 2,
             boardTo: 2,
             positionTo: positionTo,
             positionFrom: positionFrom);
-        //increment _killedPieceCount to move next killed piece to an empty field on the second board
+        // Increment _killedPieceCount to move next killed piece to an empty field on the second board
         _killedPiecesCount++;
       } else {
         await _service.moveChessPiece(2, positionFrom, 2, positionTo);
-        // add this move into reSetter
+        // Add this move into reSetter
         BoardReSetter.addMove(
             boardFrom: 2,
             boardTo: 2,
@@ -372,7 +433,7 @@ class ChessBoardViewModel extends ChangeNotifier {
     });
   }
 
-  void setSelectedToDefault(){
+  void setSelectedToDefault() {
     _selectedFieldIndex = -1;
     _selectedFieldRow = -1;
     _selectedFieldColumn = -1;
@@ -384,5 +445,161 @@ class ChessBoardViewModel extends ChangeNotifier {
     placePiecesToDefault();
     setSelectedToDefault();
     initChessBoard();
+  }
+
+  // WebSocket related methods
+
+  /// Set up WebSocket message listeners
+  void _setupWebSocketListeners() {
+    _webSocketService.messageStream.listen((message) {
+      _handleWebSocketMessage(message);
+    }, onError: (error) {
+      _webSocketStatus = 'Communication error: ${error.toString()}';
+      _webSocketError = true;
+      notifyListeners();
+    });
+  }
+
+  /// Connect to a WebSocket server
+  Future<void> connectToWebSocket(String url) async {
+    try {
+      _webSocketStatus = 'Connecting...';
+      _webSocketError = false;
+      notifyListeners();
+
+      await _webSocketService.connect(url);
+
+      _isWebSocketConnected = _webSocketService.isConnected;
+      if (_isWebSocketConnected) {
+        _webSocketStatus = 'Connected to server';
+        // Request initial board state
+        _webSocketService.getBoardState();
+      } else {
+        _webSocketStatus = 'Connection failed';
+        _webSocketError = true;
+      }
+
+      notifyListeners();
+    } catch (e) {
+      _webSocketStatus = 'Connection error: ${e.toString()}';
+      _webSocketError = true;
+      notifyListeners();
+    }
+  }
+
+  /// Disconnect from WebSocket server
+  void disconnectWebSocket() {
+    _webSocketService.disconnect();
+    _isWebSocketConnected = false;
+    _webSocketStatus = 'Disconnected';
+    notifyListeners();
+  }
+
+  /// Handle incoming WebSocket messages
+  void _handleWebSocketMessage(Map<String, dynamic> message) {
+    final messageType = message['type'];
+
+    switch (messageType) {
+      case 'init_game':
+        // Initialize game
+        _playerColor = message['data']['color']; // 'w' or 'b'
+        _isWhiteTurn = true; // White always starts
+        _webSocketStatus =
+            'Game started, you play as ${_playerColor == 'w' ? 'white' : 'black'}';
+
+        // Request initial board state
+        _webSocketService.getBoardState();
+        break;
+
+      case 'update_game_state':
+        // Update board state
+        if (message['data'].containsKey('board_state')) {
+          final fen = message['data']['board_state']['fen'];
+          _updateBoardFromFen(fen);
+
+          // Update turn information
+          _isWhiteTurn = FenUtils.getIsWhiteTurn(fen);
+
+          // Update check and checkmate status
+          _check = isCheck(!_isWhiteTurn);
+          if (_check) {
+            _alertMessage = 'Check';
+            _checkMate = isCheckMate(!_isWhiteTurn);
+            if (_checkMate) {
+              _alertMessage = 'Check Mate';
+            }
+          } else {
+            _alertMessage = '';
+            _checkMate = false;
+          }
+
+          _webSocketStatus = 'Board updated';
+          _isFieldEnabled = true;
+        }
+
+        // Clear selection state
+        clear();
+        setSelectedToDefault();
+        notifyListeners();
+        break;
+
+      case 'move_result':
+        // Move result
+        if (message['data']['status'] == 'success') {
+          _webSocketStatus = 'Move successful';
+          // Request updated board state
+          _webSocketService.getBoardState();
+        } else {
+          _webSocketStatus = 'Move failed: ${message['data']['message']}';
+          _webSocketError = true;
+          _isFieldEnabled = true;
+        }
+        notifyListeners();
+        break;
+
+      case 'error':
+        // Error handling
+        _webSocketStatus = 'Error: ${message['error']['message']}';
+        _webSocketError = true;
+        _isFieldEnabled = true;
+        notifyListeners();
+        break;
+    }
+  }
+
+  /// Update the board state from a FEN string
+  void _updateBoardFromFen(String fen) {
+    _chessBoard = FenUtils.fenToBoard(fen);
+
+    // Update king positions
+    for (int row = 0; row < 8; row++) {
+      for (int col = 0; col < 8; col++) {
+        final piece = _chessBoard[row][col];
+        if (piece != null && piece.type == ChessPieceType.king) {
+          if (piece.isWhite) {
+            _whiteKingPosition = [row, col];
+          } else {
+            _blackKingPosition = [row, col];
+          }
+        }
+      }
+    }
+
+    notifyListeners();
+  }
+
+  /// Request refresh of the board state from server
+  void refreshBoardState() {
+    if (_isWebSocketConnected) {
+      _webSocketService.getBoardState();
+      _webSocketStatus = 'Requesting board state...';
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _webSocketService.dispose();
+    super.dispose();
   }
 }
