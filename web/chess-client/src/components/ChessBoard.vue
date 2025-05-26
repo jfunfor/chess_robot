@@ -111,11 +111,10 @@ export default {
   },
   methods: {
      connectWebSocket() {
-      const wsUrl = `ws://${window.APP_CONFIG.WS_SERVER_IP}:${window.APP_CONFIG.WS_SERVER_PORT}`;
-      this.socket = new WebSocket(wsUrl);
+      this.socket = new WebSocket('ws:// 10.160.160.148:8765');
 
       this.socket.onopen = () => {
-        console.log('Connected to:', wsUrl);
+        console.log('Connected to WebSocket server');
       };
 
       this.socket.onmessage = (event) => {
