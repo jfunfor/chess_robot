@@ -37,15 +37,15 @@
 ```
 web/
 ├── chess-client/ # Клиентская часть        
-├── public/ # Статические файлы
-│ │ └── index.html # Основной HTML-файл      
+├── public/ # Статические файлы     
 ├── src/                 
 │ ├── assets/ # Ресурсы (изображения, стили)                  
 │ ├── components/ # Компоненты Vue                 
 │ │ ├── icons/ # Иконки                  
 │ │ └── ChessBoard.vue # Шахматная доска              
 │ ├── App.vue # Корневой компонент          
-│ └── main.js # Точка входа            
+│ └── main.js # Точка входа
+├── index.html # Основной HTML-файл
 ├── package.json # Зависимости и скрипты 
 └── vite.config.js # Конфиг Vite
 ```
